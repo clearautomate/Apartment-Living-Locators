@@ -1,0 +1,119 @@
+.base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: background-color .2s, border-color .2s, color .2s, opacity .2s, filter .2s;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid transparent;
+    user-select: none;
+}
+
+.base:hover {
+    cursor: pointer;
+    background-color: color-mix(in hsl, var(--btn-bg) 80%, black);
+}
+
+.fullWidth {
+    width: 100%;
+}
+
+/* Sizes */
+.size_sm {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.size_md {
+    font-size: 1rem;
+}
+
+.size_lg {
+    font-size: 1.125rem;
+    padding: 0.5rem 1rem;
+}
+
+/* Variants */
+.variant_default {
+    background: var(--btn-bg, #2563eb);
+    color: var(--btn-fg, #fff);
+}
+
+.variant_outline {
+    background: #fff;
+    color: var(--btn-bg, #111);
+    border-color: var(--btn-bg, #ddd);
+}
+
+.variant_destructive {
+    background: #dc2626;
+    color: #fff;
+}
+
+/* Colors (set variables used by variants) */
+.color_primary {
+    --btn-bg: #2563eb;
+    --btn-fg: #ffffff;
+}
+
+.color_bg {
+    --btn-bg: #e5e7eb;
+    --btn-fg: #111827;
+}
+
+.color_text {
+    --btn-bg: #111827;
+    --btn-fg: #ffffff;
+}
+
+/* Custom color provided via inline style: --btn-color */
+.color_custom {
+    --btn-bg: var(--btn-color, #6b7280);
+    --btn-fg: #ffffff;
+}
+
+/* Loading */
+.loading {
+    cursor: progress;
+    opacity: 0.9;
+}
+
+.spinner {
+    width: 1em;
+    height: 1em;
+    border: 0.2em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Content & icon layout */
+.content {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.icon {
+    display: inline-flex;
+}
+
+.iconLeft .icon {
+    order: 0;
+}
+
+.iconRight {
+    flex-direction: row-reverse;
+}
+
+.label {
+    display: inline-flex;
+}

@@ -1,0 +1,34 @@
+.nav {
+    background: var(--bg);
+    padding: 1rem;
+}
+
+.agentLinks {
+    display: flex;
+    gap: 1rem;
+}
+
+.filterRow {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+.links {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem auto;
+    background-color: var(--bg);
+    padding: 0.5rem;
+    border-radius: var(--corners);
+    width: max-content;
+}
+
+.links a {
+    padding: 0.5rem;
+    border-radius: var(--corners);
+}
+
+.links a:hover {
+    background: var(--bg-dark);
+}

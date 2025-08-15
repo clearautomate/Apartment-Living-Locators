@@ -1,0 +1,36 @@
+/* components/ui/styles.module.css */
+.link {
+    text-decoration: none;
+    transition: color 120ms ease;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+.active {
+    font-weight: 600;
+}
+
+.color-default {
+    color: inherit;
+}
+
+.color-primary {
+    color: var(--secondary);
+    /* Tailwind blue-600 */
+}
+
+.color-secondary {
+    color: #6b7280;
+    /* Tailwind gray-500 */
+}
+
+.color-danger {
+    color: #dc2626;
+    /* Tailwind red-600 */
+}

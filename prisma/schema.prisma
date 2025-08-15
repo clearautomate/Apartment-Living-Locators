@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String      @id @default(uuid())
+  fname       String
+  lname       String
+  email       String?
+  username    String      @unique
+  password    String
+  permissions Permissions @default(agent)
+  isDeleted   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+
+  leases Lease[]
+  draws  Draw[]
+}
+
+enum Permissions {
+  owner
+  agent
+}
+
+model Lease {
+  id              String         @id @default(uuid())
+  moveInDate      DateTime
+  invoiceNumber   String
+  complex         String
+  tenantFname     String
+  tenantLname     String
+  apartmentNumber String
+  rentAmount      Float
+  commissionType  CommissionType
+  commissionDue   Float
+  extraNotes      String?
+  paidStatus      PaidStatus     @default(unpaid)
+  createdAt       DateTime       @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+enum CommissionType {
+  percent
+  monthly
+}
+
+enum PaidStatus {
+  unpaid
+  paid
+  goingToPay
+  chargeback
+  partially
+}
+
+model Draw {
+  id        String   @id @default(uuid())
+  date      DateTime
+  amount    Float
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}
