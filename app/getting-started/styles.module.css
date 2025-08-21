@@ -1,0 +1,58 @@
+.wrapper p {
+    color: var(--text-muted);
+
+}
+
+.videoGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4rem;
+}
+
+.video {
+    width: 100%;
+    border-radius: var(--corners);
+}
+
+.title {}
+
+.title p {}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+.card {
+    padding: 1rem;
+    background: var(--bg-lighter);
+    border: 1px solid var(--border);
+    border-radius: var(--corners);
+}
+
+.icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: var(--corners);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.link {
+    margin-top: 1rem;
+}
+
+.tips {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.tip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}

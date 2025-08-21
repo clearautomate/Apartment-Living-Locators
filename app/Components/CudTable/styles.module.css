@@ -1,0 +1,69 @@
+.container {
+    display: grid;
+    gap: 1rem;
+    background: white;
+    padding: 1rem;
+    border-radius: var(--corners);
+    border: 1px solid var(--border);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.title {
+    margin: 0
+}
+
+.tableCorners {
+    border-radius: var(--corners) var(--corners) 0 0;
+    overflow: hidden;
+}
+
+.tableWrapper {
+    overflow-x: auto;
+}
+
+.table {
+    /* shrink-wrap to content so columns take only what they need */
+    min-width: 100%;
+    width: max-content;
+    table-layout: auto;
+    border-collapse: collapse;
+}
+
+.th {
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    background-color: hsl(0, 0%, 95%);
+    padding: 1rem;
+    white-space: nowrap;
+    /* keep headers on one line */
+}
+
+.td {
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem;
+    white-space: nowrap;
+    color: var(--text-muted);
+    /* keep cells on one line */
+}
+
+.actions {
+    white-space: nowrap;
+    /* prevent wrapping in actions column */
+    border-bottom: 1px solid var(--border);
+}
+
+.empty {
+    padding: 12px;
+    opacity: 0.7;
+    text-align: center;
+}
+
+.form {
+    display: grid;
+    gap: 12px;
+}

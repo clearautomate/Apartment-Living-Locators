@@ -6,6 +6,7 @@ export const UserSchema = z.object({
     fname: z.string().min(1, "First name is required"),
     lname: z.string().min(1, "Last name is required"),
     email: z.email().nullable().optional(),
+    phone: z.string().regex(/^\d+$/, "Phone must contain only numbers").or(z.string().length(0)).optional(),
     username: z.string().min(1, "Username is required"),
     password: z.string().min(1, "Password is required"),
     permissions: z.enum(["owner", "agent"]).default("agent"),
@@ -20,6 +21,7 @@ export const userColumns: ColumnDef<UserRow>[] = [
     { key: "fname", label: "First Name", input: "text", editableBy: ["owner"], required: true },
     { key: "lname", label: "Last Name", input: "text", editableBy: ["owner"], required: true },
     { key: "email", label: "Email", input: "text", editableBy: ["owner"] },
+    { key: "phone", label: "Phone", input: "number", editableBy: ["owner"] },
     { key: "username", label: "Username", input: "text", editableBy: ["owner"], required: true },
     { key: "password", label: "Password", input: "text", editableBy: ["owner"], required: true },
     {
@@ -32,14 +34,14 @@ export const userColumns: ColumnDef<UserRow>[] = [
             { value: "agent", label: "Agent" },
         ],
     },
-    {
-        key: "createdAt",
-        label: "Created",
-        input: "text",
-        format: (v) =>
-            v ? new Intl.DateTimeFormat("en-US", { dateStyle: "short", timeStyle: "short" })
-                .format(new Date(String(v))) : "",
-    },
+    // {
+    //     key: "createdAt",
+    //     label: "Created",
+    //     input: "text",
+    //     format: (v) =>
+    //         v ? new Intl.DateTimeFormat("en-US", { dateStyle: "short", timeStyle: "short" })
+    //             .format(new Date(String(v))) : "",
+    // },
 ];
 
 export const userTableConfig: TableConfig<UserRow> = {

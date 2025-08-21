@@ -11,12 +11,24 @@ type AnchorExtras = Omit<
 export interface LinkProps extends NextLinkProps, AnchorExtras {
     underline?: boolean;
     active?: boolean;
-    color?: "default" | "primary" | "secondary" | "danger" | (string & {}); // allow preset or custom string
+    color?: "default" | "primary" | "secondary" | "danger" | (string & {});
+    icon?: React.ReactNode; // ✅ new prop
+    iconPosition?: "left" | "right"; // ✅ configurable placement
 }
 
 const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(
     (
-        { href, underline = false, active = false, color = "default", className, ...rest },
+        {
+            href,
+            underline = false,
+            active = false,
+            color = "default",
+            className,
+            icon,
+            iconPosition = "left",
+            children,
+            ...rest
+        },
         ref
     ) => {
         const classes = [
@@ -29,7 +41,17 @@ const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(
             .filter(Boolean)
             .join(" ");
 
-        return <NextLink href={href} ref={ref} className={classes} {...rest} />;
+        return (
+            <NextLink href={href} ref={ref} className={classes} {...rest}>
+                {icon && iconPosition === "left" && (
+                    <span className={styles.icon}>{icon}</span>
+                )}
+                {children}
+                {icon && iconPosition === "right" && (
+                    <span className={styles.icon}>{icon}</span>
+                )}
+            </NextLink>
+        );
     }
 );
 

@@ -1,5 +1,5 @@
 .input {
-    border: 1px solid var(--input-border, #ccc);
+    border: 1px solid var(--border);
     border-radius: 4px;
     padding: 0.5rem;
     width: 100%;
@@ -10,6 +10,6 @@
 }
 
 .input:focus {
-    border-color: var(--input-focus-border, #3b82f6);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    border-color: var(--input-focus-border, var(--primary));
+    box-shadow: 0 0 0 2px rgba(29, 88, 252, 0.4);
 }

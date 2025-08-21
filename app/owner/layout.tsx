@@ -19,7 +19,7 @@ export default async function AgentLayout({ children, params }: LayoutProps) {
     return (
         <>
             <header>
-                <Navbar permissions={user.permissions} />
+                <Navbar permissions={user.permissions} id={user.id}/>
             </header>
             <main>{children}</main>
         </>

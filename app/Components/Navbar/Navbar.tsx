@@ -1,39 +1,84 @@
 // components/Navbar.tsx
-import Image from "next/image";
+"use client";
 
-import styles from './styles.module.css'
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+
+import styles from "./styles.module.css";
 import Link from "../UI/Link/Link";
-import { Button } from "../UI/Button/Button";
 import LogoutButton from "./LogoutButton";
 
 interface Props {
     permissions: string;
+    id: string;
 }
 
-export default function Navbar({ permissions }: Props) {
+export default function Navbar({ permissions, id }: Props) {
+    const pathname = usePathname();
+
+    const isActive = (href: string) =>
+        pathname === href || pathname.startsWith(href + "/");
+
     return (
         <nav className={styles.nav}>
             <div className={`${styles.content} page-width`}>
                 <div className={styles.left}>
-                    {/* Logo */}
-                    <Link href="/">
-                        <Image src='/alllogo.png' alt="logo" width={291 / 4} height={164 / 4} />
+                    {/* Logo (never active) */}
+                    <Link href="/getting-started">
+                        <Image
+                            src="/alllogo.png"
+                            alt="logo"
+                            width={291 / 4}
+                            height={164 / 4}
+                        />
                     </Link>
+
                     {/* Links */}
-                    {
-                        permissions === 'owner' &&
-                        <div className={styles.links}>
-                            <Link href="/owner/overview" color="primary">
-                                Overview
-                            </Link>
-                            <Link href="/agent" color="primary">
-                                Agents
-                            </Link>
-                            <Link href="/owner/manage-users" color="primary">
-                                Manage Users
-                            </Link>
-                        </div>
-                    }
+                    <div className={styles.links}>
+                        {/* Always visible */}
+                        <Link
+                            href="/getting-started"
+                            className={isActive("/getting-started") ? styles.active : ""}
+                        >
+                            Getting Started
+                        </Link>
+
+                        {permissions === "agent" && (
+                            <>
+                                <Link
+                                    href={`/agent/${id}/logs`}
+                                    className={isActive("/agent") ? styles.active : ""}
+                                >
+                                    Me
+                                </Link>
+                            </>
+                        )}
+
+                        {/* Owner-only links */}
+                        {permissions === "owner" && (
+                            <>
+                                <Link
+                                    href="/owner/overview"
+                                    className={isActive("/owner/overview") ? styles.active : ""}
+                                >
+                                    Overview
+                                </Link>
+                                <Link
+                                    href="/agent"
+                                    className={isActive("/agent") ? styles.active : ""}
+                                >
+                                    Agents
+                                </Link>
+                                <Link
+                                    href="/owner/manage-users"
+                                    className={isActive("/owner/manage-users") ? styles.active : ""}
+                                >
+                                    Manage Users
+                                </Link>
+
+                            </>
+                        )}
+                    </div>
                 </div>
                 <LogoutButton />
             </div>

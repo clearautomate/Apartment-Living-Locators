@@ -10,8 +10,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Apartment Living Locators",
-  description: "Apartment Living Locators agent management",
+  title: "Apartment Living Locators Portal",
+  description: "Apartment Living Locators Portal",
 };
 
 export default function RootLayout({

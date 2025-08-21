@@ -26,7 +26,7 @@ export default function Client({
             role={role}
             rows={rows}
             actions={actions}
-            tableName="Users"
+            tableName="Manage Users"
             allowCreate
         />
     );

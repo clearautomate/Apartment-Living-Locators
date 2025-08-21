@@ -13,6 +13,7 @@ model User {
   fname       String
   lname       String
   email       String?
+  phone       String?
   username    String      @unique
   password    String
   permissions Permissions @default(agent)
@@ -29,19 +30,20 @@ enum Permissions {
 }
 
 model Lease {
-  id              String         @id @default(uuid())
-  moveInDate      DateTime
-  invoiceNumber   String
-  complex         String
-  tenantFname     String
-  tenantLname     String
-  apartmentNumber String
-  rentAmount      Float
-  commissionType  CommissionType
-  commissionDue   Float
-  extraNotes      String?
-  paidStatus      PaidStatus     @default(unpaid)
-  createdAt       DateTime       @default(now())
+  id                String         @id @default(uuid())
+  moveInDate        DateTime
+  invoiceNumber     String
+  complex           String
+  tenantFname       String
+  tenantLname       String
+  apartmentNumber   String
+  rentAmount        Float
+  commissionType    CommissionType
+  commissionPrecent Float?
+  commission        Float
+  extraNotes        String?
+  paidStatus        PaidStatus     @default(unpaid)
+  createdAt         DateTime       @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
@@ -49,7 +51,7 @@ model Lease {
 
 enum CommissionType {
   percent
-  monthly
+  flat
 }
 
 enum PaidStatus {

@@ -22,7 +22,7 @@
 
 /* Sizes */
 .size_sm {
-    font-size: 0.875rem;
+    font-size: 0.9rem;
     padding: 0.25rem 0.5rem;
 }
 
@@ -37,8 +37,8 @@
 
 /* Variants */
 .variant_default {
-    background: var(--btn-bg, #2563eb);
-    color: var(--btn-fg, #fff);
+    background: var(--btn-bg, var(--primary));
+    color: var(--btn-fg, var(--bg-light));
 }
 
 .variant_outline {
@@ -48,19 +48,19 @@
 }
 
 .variant_destructive {
-    background: #dc2626;
-    color: #fff;
+    background: var(--danger);
+    color: var(--bg-light);
 }
 
 /* Colors (set variables used by variants) */
 .color_primary {
-    --btn-bg: #2563eb;
-    --btn-fg: #ffffff;
+    --btn-bg: var(--primary);
+    --btn-fg: var(--bg-light);
 }
 
 .color_bg {
-    --btn-bg: #e5e7eb;
-    --btn-fg: #111827;
+    --btn-bg: var(--bg-light);
+    --btn-fg: var(--text);
 }
 
 .color_text {

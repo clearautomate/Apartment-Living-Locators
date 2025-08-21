@@ -22,10 +22,12 @@ async function main() {
     const end = new Date(thisYear, 11, 31);   // Dec 31 of this year
 
     // Create multiple fake leases
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 100; i++) {
+        const date = faker.date.between({ from: start, to: end });
+
         await prisma.lease.create({
             data: {
-                moveInDate: faker.date.between({ from: start, to: end }),
+                moveInDate: date,
                 invoiceNumber: `INV-${faker.number.int({ min: 1000, max: 9999 })}`,
                 complex: faker.location.city(),
                 tenantFname: faker.person.firstName(),
@@ -34,11 +36,13 @@ async function main() {
                 rentAmount: faker.number.float({ min: 800, max: 2500, fractionDigits: 2 }),
                 commissionType: faker.helpers.arrayElement([
                     CommissionType.percent,
-                    CommissionType.monthly,
+                    CommissionType.flat,
                 ]),
-                commissionDue: faker.number.float({ min: 50, max: 500, fractionDigits: 2 }),
+                commissionPrecent: faker.number.float({ min: 0, max: 100, fractionDigits: 2 }),
+                commission: faker.number.float({ min: 50, max: 500, fractionDigits: 2 }),
+                createdAt: date,
                 // userId: user.id,
-                userId: "3c7f0474-42c8-4711-accb-05b29d0cc92f"
+                userId: "a1c113e6-a188-40ae-8d07-534140355570"
             },
         });
     }

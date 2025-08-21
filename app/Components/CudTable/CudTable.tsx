@@ -3,8 +3,8 @@
 import * as React from "react";
 import { Button } from "../UI/Button/Button";
 import type { TableConfig, Role } from "@/lib/table/types";
+import styles from "./styles.module.css";
 
-// ⬇️ import your dialog primitives
 import {
     Dialog,
     DialogContent,
@@ -19,17 +19,18 @@ import { HiOutlinePencilSquare, HiOutlinePlus, HiOutlineTrash } from "react-icon
 
 export type ActionResult = { ok: boolean; message: string };
 
+// Each action is now optional and may be null.
 export type ActionHandlers<TRow extends { id: string }> = {
-    onCreate: (form: FormData) => Promise<ActionResult>;
-    onUpdate: (id: string, form: FormData) => Promise<ActionResult>;
-    onDelete: (id: string) => Promise<ActionResult>;
+    onCreate?: ((form: FormData) => Promise<ActionResult>) | null;
+    onUpdate?: ((id: string, form: FormData) => Promise<ActionResult>) | null;
+    onDelete?: ((id: string) => Promise<ActionResult>) | null;
 };
 
 type Props<TRow extends { id: string }> = {
     config: TableConfig<TRow>;
     role: Role;
     rows: TRow[];
-    actions: ActionHandlers<TRow>;
+    actions?: ActionHandlers<TRow> | null; // actions object itself can be omitted/null
     tableName?: string;
     allowCreate?: boolean;
     creationDefaults?: Partial<TRow>; // may be undefined
@@ -46,6 +47,11 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         creationDefaults,
     } = props;
 
+    const canCreate = Boolean(actions?.onCreate) && allowCreate;
+    const canUpdate = Boolean(actions?.onUpdate);
+    const canDelete = Boolean(actions?.onDelete);
+    const hasRowActions = canUpdate || canDelete;
+
     const visibleColumns = React.useMemo(
         () =>
             config.columns.filter((c) => {
@@ -55,27 +61,27 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         [config.columns, role]
     );
 
-    // ---- Dialog + form state
     const [isOpen, setOpen] = React.useState(false);
     const [mode, setMode] = React.useState<"create" | "edit">("create");
     const [current, setCurrent] = React.useState<Partial<TRow>>({} as Partial<TRow>);
     const [busy, setBusy] = React.useState(false);
     const [msg, setMsg] = React.useState<string | null>(null);
 
-    // Always merge Partial<TRow> to avoid `{ id?: TRow['id'] }` narrowing
     const mergeCurrent = React.useCallback((patch: Partial<TRow>) => {
         setCurrent((prev) => ({ ...prev, ...patch }));
     }, []);
 
     function openCreate() {
+        if (!canCreate) return;
         setMode("create");
         setMsg(null);
-        const defaults = (creationDefaults ?? {}) as Partial<TRow>; // <- never undefined
-        setCurrent({ ...defaults }); // satisfies SetStateAction<Partial<TRow>>
+        const defaults = (creationDefaults ?? {}) as Partial<TRow>;
+        setCurrent({ ...defaults });
         setOpen(true);
     }
 
     function openEdit(row: TRow) {
+        if (!canUpdate) return;
         setMode("edit");
         setMsg(null);
         setOpen(true);
@@ -95,18 +101,15 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         return d.toISOString().slice(0, 10);
     }
 
-    // Identify which keys are date inputs, once
     const dateKeys = React.useMemo(
-        () => config.columns.filter(c => c.input === "date").map(c => c.key),
+        () => config.columns.filter((c) => c.input === "date").map((c) => c.key),
         [config.columns]
     );
 
-    // String helpers
     function isDateOnly(s: string) {
         return /^\d{4}-\d{2}-\d{2}$/.test(s);
     }
     function isDatetimeLocal(s: string) {
-        // No trailing Z and at least YYYY-MM-DDTHH:mm
         return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(s) && !/[zZ]$/.test(s);
     }
 
@@ -115,7 +118,7 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         const raw = (row as any)[key];
         if (col.format) return col.format(raw, row);
         if (col.options && Array.isArray(col.options)) {
-            const opt = col.options.find(o => String(o.value) === String(raw));
+            const opt = col.options.find((o) => String(o.value) === String(raw));
             return opt ? opt.label : (raw ?? "");
         }
         return raw == null ? "" : String(raw);
@@ -136,10 +139,10 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                     required={required}
                     disabled={disabled}
                     defaultValue={value ?? ""}
+                    step="0.01"
                 />
             );
         }
-
         if (col.input === "date") {
             return (
                 <Input
@@ -151,24 +154,8 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                 />
             );
         }
-
         if (col.input === "select" && col.options) {
             return (
-                // <select
-                //     name={name}
-                //     required={required}
-                //     disabled={disabled}
-                //     defaultValue={value ?? ""}
-                // >
-                //     <option value="" disabled hidden>
-                //         Select…
-                //     </option>
-                //     {col.options.map((o) => (
-                //         <option key={String(o.value)} value={String(o.value)}>
-                //             {o.label}
-                //         </option>
-                //     ))}
-                // </select>
                 <Dropdown
                     name={name}
                     required={required}
@@ -176,16 +163,11 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                     defaultValue={value ?? ""}
                     options={[
                         { value: "", label: "Select…" },
-                        ...col.options.map((o) => ({
-                            value: String(o.value),
-                            label: o.label
-                        }))
+                        ...col.options.map((o) => ({ value: String(o.value), label: o.label })),
                     ]}
                 />
-
             );
         }
-
         return (
             <Input
                 type="text"
@@ -201,48 +183,37 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         e.preventDefault();
         setBusy(true);
         setMsg(null);
-
         const form = new FormData(e.currentTarget);
-
-        // Build a patched FormData where date inputs are normalized to ISO
         const patched = new FormData();
         for (const [k, v] of form.entries()) {
             let val = typeof v === "string" ? v : String(v);
-
+            if (val === "") continue;
             if (dateKeys.includes(k as any)) {
-                if (isDateOnly(val)) {
-                    // Choose UTC midnight as the canonical moment
-                    val = new Date(val + "T00:00:00Z").toISOString();
-                } else if (isDatetimeLocal(val)) {
-                    // Treat as local time, convert to UTC ISO
-                    val = new Date(val).toISOString();
-                }
+                if (isDateOnly(val)) val = new Date(val + "T00:00:00Z").toISOString();
+                else if (isDatetimeLocal(val)) val = new Date(val).toISOString();
             }
-
             patched.append(k, val);
         }
 
         let res: ActionResult;
         try {
             if (mode === "create") {
+                if (!actions?.onCreate) throw new Error("Create is not available.");
                 res = await actions.onCreate(patched);
             } else {
-                const id = String(current.id);
-                res = await actions.onUpdate(id, patched);
+                if (!actions?.onUpdate) throw new Error("Update is not available.");
+                res = await actions.onUpdate(String(current.id), patched);
             }
         } catch (err: any) {
             res = { ok: false, message: err?.message ?? "Request failed" };
         }
-
         setBusy(false);
         setMsg(res.message);
-        if (res.ok) {
-            setOpen(false);
-            // Server action revalidates; no local mutate here
-        }
+        if (res.ok) setOpen(false);
     }
 
     async function onDelete(id: string) {
+        if (!actions?.onDelete) return; // no button renders if not available
         if (!confirm("Delete this item?")) return;
         setBusy(true);
         setMsg(null);
@@ -257,116 +228,122 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
     }
 
     return (
-        <div style={{ display: "grid", gap: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h2 style={{ margin: 0 }}>{tableName}</h2>
-                {allowCreate && (
+        <div className={styles.container}>
+            <div className={styles.header}>
+                <h2 className={styles.title}>{tableName}</h2>
+                {canCreate && (
                     <Button onClick={openCreate} disabled={busy} icon={<HiOutlinePlus />}>
                         New
                     </Button>
                 )}
             </div>
 
-            <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                        <tr>
-                            {visibleColumns.map((c) => (
-                                <th
-                                    key={c.key}
-                                    style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: 8 }}
-                                >
-                                    {c.label}
-                                </th>
-                            ))}
-                            <th style={{ borderBottom: "1px solid #ddd" }} />
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows.map((r) => (
-                            <tr key={r.id}>
-                                {visibleColumns.map((c) => (
-                                    <td key={c.key} style={{ borderBottom: "1px solid #f0f0f0", padding: 8 }}>
-                                        {renderCell(r, c.key)}
-                                    </td>
-                                ))}
-                                <td style={{ whiteSpace: "nowrap", padding: 8 }}>
-                                    <Button onClick={() => openEdit(r)} disabled={busy} variant="outline" icon={<HiOutlinePencilSquare />}>
-                                        Edit
-                                    </Button>{" "}
-                                    <Button onClick={() => onDelete(r.id)} disabled={busy} variant="destructive" icon={<HiOutlineTrash />}>
-                                        Delete
-                                    </Button>
-                                </td>
-                            </tr>
-                        ))}
-                        {rows.length === 0 && (
+            <div className={styles.tableCorners}>
+                <div className={styles.tableWrapper}>
+                    <table className={styles.table}>
+                        <thead>
                             <tr>
-                                <td colSpan={visibleColumns.length + 1} style={{ padding: 12, opacity: 0.7 }}>
-                                    No rows
-                                </td>
+                                {visibleColumns.map((c) => (
+                                    <th key={c.key} className={styles.th}>
+                                        {c.label}
+                                    </th>
+                                ))}
+                                {hasRowActions && <th className={styles.th} />}
                             </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {rows.map((r) => (
+                                <tr key={r.id}>
+                                    {visibleColumns.map((c) => (
+                                        <td key={c.key} className={styles.td}>
+                                            {renderCell(r, c.key)}
+                                        </td>
+                                    ))}
+                                    {hasRowActions && (
+                                        <td className={styles.actions}>
+                                            {canUpdate && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => openEdit(r)}
+                                                    disabled={busy}
+                                                    variant="outline"
+                                                    icon={<HiOutlinePencilSquare />}
+                                                >
+                                                    Edit
+                                                </Button>
+                                            )}{" "}
+                                            {canDelete && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => onDelete(r.id)}
+                                                    disabled={busy}
+                                                    variant="destructive"
+                                                    icon={<HiOutlineTrash />}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            )}
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
+                            {rows.length === 0 && (
+                                <tr>
+                                    <td colSpan={visibleColumns.length + (hasRowActions ? 1 : 0)} className={styles.empty}>
+                                        No rows
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* ⬇️ Use your Dialog instead of the ad-hoc overlay */}
-            <Dialog open={isOpen} onOpenChange={(o) => {
-                if (!busy) {
-                    setOpen(o);
-                    if (!o) setCurrent({} as Partial<TRow>);
-                }
-            }}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>
-                            {mode === "create" ? `New ${tableName}` : `Edit ${tableName}`}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {mode === "create"
-                                ? `Create a new ${tableName.slice(0, -1).toLowerCase()} entry.`
-                                : `Update the selected ${tableName.slice(0, -1).toLowerCase()} entry.`}
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <Form onSubmit={onSubmit} className="grid gap-3">
-                        {mode === "edit" && (
-                            <input type="hidden" name="id" value={String(current.id)} readOnly />
-                        )}
-
-                        {/* Fields */}
-                        {visibleColumns.map((c) => (
-                            <Field
-                                key={c.key}
-                                label={c.label}
-                                htmlFor={c.key}
-                                requiredMark={!!c.required}
-                            >
-                                {renderInput(c.key)}
-                            </Field>
-                        ))}
-
-                        {/* Error message */}
-                        <FormError message={msg} />
-
-                        {/* Actions */}
-                        <FormActions align="right">
-                            <Button
-                                variant="destructive"
-                                type="button"
-                                onClick={() => setOpen(false)}
-                                disabled={busy}
-                            >
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={busy}>
-                                {busy ? "Saving…" : "Save"}
-                            </Button>
-                        </FormActions>
-                    </Form>
-                </DialogContent>
-            </Dialog>
+            {/* Only render the dialog if at least one of create/update is available */}
+            {(canCreate || canUpdate) && (
+                <Dialog
+                    open={isOpen}
+                    onOpenChange={(o) => {
+                        if (!busy) {
+                            setOpen(o);
+                            if (!o) setCurrent({} as Partial<TRow>);
+                        }
+                    }}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>
+                                {mode === "create" ? `New ${tableName}` : `Edit ${tableName}`}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {mode === "create"
+                                    ? `Create a new ${tableName.slice(0, -1).toLowerCase()} entry.`
+                                    : `Update the selected ${tableName.slice(0, -1).toLowerCase()} entry.`}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <Form onSubmit={onSubmit} className={styles.form}>
+                            {mode === "edit" && canUpdate && (
+                                <input type="hidden" name="id" value={String(current.id)} readOnly />
+                            )}
+                            {visibleColumns.map((c) => (
+                                <Field key={c.key} label={c.label} htmlFor={c.key} requiredMark={!!c.required}>
+                                    {renderInput(c.key)}
+                                </Field>
+                            ))}
+                            <FormError message={msg} />
+                            <FormActions align="right">
+                                <Button variant="destructive" type="button" onClick={() => setOpen(false)} disabled={busy}>
+                                    Cancel
+                                </Button>
+                                {/* Submit label adapts to mode */}
+                                <Button type="submit" disabled={busy}>
+                                    {busy ? "Saving…" : mode === "create" ? "Create" : "Save"}
+                                </Button>
+                            </FormActions>
+                        </Form>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 }

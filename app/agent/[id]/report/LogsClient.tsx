@@ -12,7 +12,7 @@ type Actions = {
     onDelete: (id: string) => Promise<ActionResult>;
 };
 
-export default function Client({
+export default function LogsClient({
     role,
     rows,
     actions,
@@ -27,7 +27,7 @@ export default function Client({
             role={role}
             rows={rows}
             actions={actions}
-            tableName="Lease"
+            tableName="Logs"
             allowCreate
         />
     );

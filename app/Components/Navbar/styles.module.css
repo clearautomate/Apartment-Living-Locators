@@ -1,5 +1,5 @@
 .nav {
-    background: var(--primary);
+    background: hsl(224, 97%, 15%);
     padding: 1rem;
 }
 
@@ -17,4 +17,18 @@
 .links {
     display: flex;
     gap: 1rem;
+    color: var(--bg-dark);
+    transition: var(--transition-s);
+}
+
+.links a {
+    position: relative;
+}
+
+.links a:hover {
+    color: var(--bg-light);
+}
+
+.active {
+    color: var(--bg-light) !important;
 }

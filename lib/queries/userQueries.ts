@@ -13,16 +13,17 @@ export async function listUsers() {
                 fname: true,
                 lname: true,
                 email: true,
+                phone: true,
                 username: true,
                 password: true,
                 permissions: true,
-                createdAt: true
+                // createdAt: true
             }
         }
     )
 
     return rows.map((r) => ({
         ...r,
-        createdAt: r.createdAt.toISOString(),
+        // createdAt: r.createdAt.toISOString(),
     })) as UserRow[];
 }

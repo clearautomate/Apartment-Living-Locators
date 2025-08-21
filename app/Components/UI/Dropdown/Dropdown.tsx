@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import styles from "./styles.module.css";
+import { HiOutlineChevronDown } from "react-icons/hi2";
 
 interface DropdownProps
     extends React.SelectHTMLAttributes<HTMLSelectElement> {
@@ -18,7 +19,7 @@ export function Dropdown({ options, className = "", ...props }: DropdownProps) {
                     </option>
                 ))}
             </select>
-            <span className={styles.icon}>▾</span>
+            <span className={styles.icon}><HiOutlineChevronDown size={16} /></span>
         </div>
     );
 }

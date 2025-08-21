@@ -1,15 +1,16 @@
 :root {
-  --bg-dark: hsl(224, 50%, 87%);
-  --bg: hsl(224, 50%, 92%);
+  --bg-dark: hsl(224, 50%, 80%);
+  --bg: hsl(224, 50%, 95%);
   --bg-light: hsl(224, 50%, 97%);
+  --bg-lighter: hsl(224, 50%, 100%);
 
-  --border: hsl(0, 0%, 70%);
+  --border: hsl(224, 0%, 85%);
 
   --text: hsl(0, 0%, 10%);
-  --text-muted: hsl(0, 0%, 40%);
+  --text-muted: hsl(0, 0%, 35%);
 
-  --primary: hsl(224, 97%, 15%);
-  --primary-highlighted: hsl(224, 97%, 35%);
+  --primary: hsl(224, 97%, 55%);
+  --primary-highlighted: hsl(224, 97%, 50%);
 
   --secondary: hsl(55, 96%, 59%);
   --secondary: hsl(55, 96%, 79%);

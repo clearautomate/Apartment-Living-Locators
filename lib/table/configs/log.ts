@@ -10,18 +10,14 @@ export const LogSchema = z.object({
     tenantLname: z.string().min(1),
     apartmentNumber: z.string().min(1),
     rentAmount: z.coerce.number().positive(),
-    commissionType: z.enum(["percent", "monthly"]),
-    commissionDue: z.coerce.number().nonnegative(),
+    commissionType: z.enum(["flat", "percent"]),
+    commissionPrecent: z.coerce.number().min(0).max(100).optional(),
+    commission: z.coerce.number().nonnegative(),
     extraNotes: z.string().nullable().optional(),
-    paidStatus: z.enum(["unpaid", "paid", "goingToPay", "chargeback", "partially"]),
+    paidStatus: z.enum(["unpaid", "paid", "goingToPay", "chargeback", "partially"]).optional(),
     createdAt: z.iso.datetime().optional(),
     userId: z.uuid(),
 })
-    .refine(
-        (v) => v.commissionType !== "percent" || (v.commissionDue >= 0 && v.commissionDue <= 100),
-        { message: "Percent commission must be 0–100", path: ["commissionDue"] }
-    )
-    .strict();
 
 export type LogRow = z.infer<typeof LogSchema>;
 
@@ -46,20 +42,41 @@ export const logColumns: ColumnDef<LogRow>[] = [
 
     {
         key: "commissionType",
-        label: "Comm Type",
+        label: "Comm. Type",
         input: "select",
         editableBy: ["owner", "agent"],
-        options: [
-            { value: "percent", label: "Percent" },
-            { value: "monthly", label: "Monthly" },
-        ],
+        required: true,
+        options: [{
+            label: "Percent", value: "percent"
+        }, {
+            label: "Flat", value: "flat"
+        }
+        ]
     },
 
     {
-        key: "commissionDue",
-        label: "Comm Due",
+        key: "commissionPrecent",
+        label: "Comm. %",
         input: "number",
         editableBy: ["owner", "agent"],
+        required: false,
+        format: (value: unknown) => {
+            if (typeof value === "number") {
+                return `${value.toFixed(2)}%`;
+            }
+            if (typeof value === "string" && value.trim() !== "" && !isNaN(Number(value))) {
+                return `${Number(value).toFixed(2)}%`;
+            }
+            return "";
+        }
+    },
+
+    {
+        key: "commission",
+        label: "Comm. $",
+        input: "number",
+        editableBy: ["owner", "agent"],
+        required: true,
         format: (v) =>
             typeof v === "number"
                 ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(v)
@@ -85,6 +102,7 @@ export const logColumns: ColumnDef<LogRow>[] = [
         label: "Move-in",
         input: "date",
         editableBy: ["owner", "agent"],
+        required: true,
         format: (v) => (v ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(String(v))) : ""),
     },
 

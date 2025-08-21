@@ -1,9 +1,17 @@
-import { prisma } from "@/lib/prisma";
-import Link from "../UI/Link/Link";
+"use client";
+
 import styles from "./styles.module.css";
 import { Dropdown } from "../UI/Dropdown/Dropdown";
 import { Button } from "../UI/Button/Button";
-import { HiOutlineDownload } from "react-icons/hi";
+const Links = dynamic(() => import("./Links"), {
+    ssr: false,
+    loading: () => <div style={{ height: 200 }} />,
+});
+import { HiOutlineFilter } from "react-icons/hi";
+import Users from "./Users";
+import { User } from "@/app/generated/prisma";
+import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 
 function monthYearOptions(startYear = 2025) {
     const now = new Date();
@@ -35,81 +43,61 @@ function monthYearOptions(startYear = 2025) {
 interface Props {
     permissions: "owner" | "admin" | "agent";
     paramId: string;
+    users: {
+        id: string;
+        fname: string;
+        lname: string;
+    }[];
 }
 
-export default async function AgentNavbar({ permissions, paramId }: Props) {
-    const users =
-        permissions === "owner"
-            ? await prisma.user.findMany({
-                select: { id: true, fname: true, lname: true },
-            })
-            : [];
-
+export default function AgentNavbar({ permissions, paramId, users }: Props) {
     const { months, years } = monthYearOptions(2025);
     const now = new Date();
-    const defaultMonth = String(now.getUTCMonth() + 1).padStart(2, "0");
-    const defaultYear = String(now.getUTCFullYear());
+
+    const searchParams = useSearchParams();
+
+    const defaultMonth =
+        searchParams.get("month") || String(now.getUTCMonth() + 1).padStart(2, "0");
+    const defaultYear = searchParams.get("year") || String(now.getUTCFullYear());
 
     return (
         <>
-            {permissions === "owner" && <nav className={styles.nav}>
-                <div className="page-width">
-                    <div className={styles.agentLinks}>
-                        {users.map((u) => (
-                            <Link
-                                key={u.id}
-                                href={`/agent/${u.id}/logs`}
-                            >
-                                {u.fname} {u.lname?.charAt(0) ?? ""}.
-                            </Link>
-                        ))}
-                    </div>
+            <div className="page-width">
+                <div className={styles.filters}>
+                    <Users users={users} permissions={permissions} />
+                    <form method="GET" className={styles.fields}>
+                        <label htmlFor="month">Month:</label>
+                        <Dropdown
+                            id="month"
+                            name="month"
+                            defaultValue={defaultMonth}
+                            options={months.map((m) => ({
+                                value: m.value,
+                                label: m.label,
+                            }))}
+                        />
+                        <Dropdown
+                            id="year"
+                            name="year"
+                            defaultValue={defaultYear}
+                            options={years.map((y) => ({
+                                value: String(y),
+                                label: String(y),
+                            }))}
+                        />
+
+                        <Button
+                            type="submit"
+                            size="lg"
+                            icon={<HiOutlineFilter size={20} />}
+                        >
+                            Apply
+                        </Button>
+                    </form>
                 </div>
-            </nav >
-            }
+            </div>
 
-            {paramId && (
-                <>
-                    <div className="page-width">
-                        <div className={styles.links}>
-                            <Link href={`/agent/${paramId}/overview`}>Overview</Link>
-                            <Link href={`/agent/${paramId}/logs`}>Logs</Link>
-                            <Link href={`/agent/${paramId}/collections`}>Collections</Link>
-                            <Link href={`/agent/${paramId}/report`}>Report</Link>
-                        </div>
-                    </div>
-
-                    <div className={`page-width ${styles.filterRow}`}>
-                        <form method="GET">
-                            <label htmlFor="month">Month</label>
-                            <Dropdown
-                                id="month"
-                                name="month"
-                                defaultValue={defaultMonth}
-                                options={months.map((m) => ({
-                                    value: m.value,
-                                    label: m.label,
-                                }))}
-                            />
-
-                            <label htmlFor="year">Year</label>
-                            <Dropdown
-                                id="year"
-                                name="year"
-                                defaultValue={defaultYear}
-                                options={years.map((y) => ({
-                                    value: String(y),
-                                    label: String(y),
-                                }))}
-                            />
-
-                            <Button type="submit">Apply</Button>
-                        </form>
-
-                        <Button icon={<HiOutlineDownload />}>Download Report</Button>
-                    </div>
-                </>
-            )}
+            {paramId && <Links paramId={paramId} />}
         </>
     );
 }

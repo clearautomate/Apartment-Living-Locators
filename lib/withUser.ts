@@ -24,7 +24,7 @@ export async function withUser(): Promise<SafeUser> {
         where: { id: decoded.id },
         select: {
             id: true, fname: true, lname: true, email: true,
-            username: true, permissions: true, createdAt: true
+            username: true, permissions: true, createdAt: true, phone: true
         },
     });
 

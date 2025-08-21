@@ -1,24 +1,27 @@
-.nav {
-    background: var(--bg);
-    padding: 1rem;
-}
-
-.agentLinks {
-    display: flex;
-    gap: 1rem;
-}
-
-.filterRow {
-    margin-top: 2rem;
+.filters {
     display: flex;
     justify-content: space-between;
+    background: var(--bg-lighter);
+    padding: 1rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border);
+    border-radius: var(--corners);
+}
+
+.fields {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .links {
     display: flex;
-    gap: 0.5rem;
-    margin: 1rem auto;
-    background-color: var(--bg);
+    gap: 0.25rem;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: var(--bg-lighter);
+    border: 1px solid var(--border);
     padding: 0.5rem;
     border-radius: var(--corners);
     width: max-content;
@@ -27,8 +30,14 @@
 .links a {
     padding: 0.5rem;
     border-radius: var(--corners);
+    color: var(--text-muted);
 }
 
 .links a:hover {
-    background: var(--bg-dark);
+    color: var(--text);
+}
+
+.active {
+    background-color: var(--bg);
+    color: var(--text);
 }
