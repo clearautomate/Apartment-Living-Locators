@@ -1,51 +1,92 @@
 import styles from "./styles.module.css";
 
-type LineItem = {
-    label: string;
-    amount: number;            // positive=credit, negative=debit
-    note?: string;
+type Totals = {
+    totalBillOut: number;           // info only; not a payout
+    splitAmount: number;            // CREDIT – pass this in already computed
+    totalAdjustments?: number;      // positive dollars; treated as DEBIT
+    totalDraws?: number;            // positive dollars; treated as DEBIT
+    notes?: {
+        billOut?: string;
+        split?: string;
+        adjustments?: string;
+        draws?: string;
+    };
 };
 
 type Props = {
     agent: string;
-    period: string;            // e.g., "August 2025"
-    items: LineItem[];
+    period: string;                 // e.g., "August 2025"
+    totals: Totals;
     showRunningBalance?: boolean;
 };
 
-function fmtUSD(n: number) {
-    return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-}
+// ---- Money helpers (exact math in cents) ----
+const toCents = (n: number) => Math.round(n * 100);
+const fromCents = (c: number) => c / 100;
+const fmtUSDc = (cents: number) =>
+    fromCents(cents).toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-export default function AgentPayoutTable({
+export default function AgentReport({
     agent,
     period,
-    items,
+    totals,
     showRunningBalance = false,
 }: Props) {
-    const credits = items.filter(i => i.amount >= 0);
-    const debits = items.filter(i => i.amount < 0);
-    const creditTotal = credits.reduce((s, i) => s + i.amount, 0);
-    const debitTotal = debits.reduce((s, i) => s + i.amount, 0);
-    const net = creditTotal + debitTotal;
+    const {
+        totalBillOut,
+        splitAmount,
+        totalAdjustments = 0,
+        totalDraws = 0,
+        notes,
+    } = totals;
 
-    let running = 0;
+    // ---- convert to cents ----
+    const billOutC = toCents(totalBillOut);                  // INFO ONLY
+    const splitC = toCents(splitAmount);                     // CREDIT
+    const adjustmentsC = -toCents(Math.abs(totalAdjustments)); // DEBIT
+    const drawsC = -toCents(Math.abs(totalDraws));             // DEBIT
 
-    const Row = ({ item }: { item: LineItem }) => {
-        running += item.amount;
-        const isDebit = item.amount < 0;
+    const creditTotalC = splitC;
+    const debitTotalC = adjustmentsC + drawsC; // <= 0
+    const netC = creditTotalC + debitTotalC;
+
+    let runningC = 0;
+
+    const Row = ({
+        label,
+        amountCents,
+        note,
+        affectsBalance = true,
+        forceNegativeStyle = false,
+        typeOverride,
+    }: {
+        label: string;
+        amountCents: number;
+        note?: string;
+        affectsBalance?: boolean;
+        forceNegativeStyle?: boolean;
+        typeOverride?: string;
+    }) => {
+        if (affectsBalance) runningC += amountCents;
+
+        const isDebit = amountCents < 0 || forceNegativeStyle;
+        const typeText =
+            typeOverride ?? (amountCents < 0 ? "Debit" : amountCents > 0 ? "Credit" : "—");
+
         return (
             <tr>
-                <td className={styles.type}>{isDebit ? "Debit" : "Credit"}</td>
+                <td className={styles.type}>{typeText}</td>
                 <td className={styles.desc}>
-                    <div className={styles.label}>{item.label}</div>
-                    {item.note ? <div className={styles.note}>{item.note}</div> : null}
+                    <div className={styles.label}>{label}</div>
+                    {note ? <div className={styles.note}>{note}</div> : null}
                 </td>
                 <td className={`${styles.amt} ${isDebit ? styles.neg : styles.pos}`}>
-                    {fmtUSD(item.amount)}
+                    {fmtUSDc(amountCents)}
                 </td>
                 {showRunningBalance && (
-                    <td className={styles.balance}>{fmtUSD(running)}</td>
+                    <td className={styles.balance}>
+                        {affectsBalance ? fmtUSDc(runningC) : ""}
+                    </td>
                 )}
             </tr>
         );
@@ -58,7 +99,6 @@ export default function AgentPayoutTable({
                 <div className={styles.meta}>
                     <span><strong>Agent:</strong> {agent}</span>
                     <span><strong>Period:</strong> {period}</span>
-                    <span><strong>Generated:</strong> {new Date().toLocaleString()}</span>
                 </div>
             </header>
 
@@ -78,58 +118,64 @@ export default function AgentPayoutTable({
                     </tr>
                 </thead>
 
-                {/* Credits */}
-                {credits.length > 0 && (
-                    <tbody>
-                        <tr className={styles.group}>
-                            <td colSpan={showRunningBalance ? 4 : 3}>Credits</td>
-                        </tr>
-                        {credits.map((item, i) => <Row key={`c-${i}`} item={item} />)}
-                        <tr className={styles.subtotal}>
-                            <td colSpan={showRunningBalance ? 2 : 2}>Subtotal credits</td>
-                            <td className={styles.right} colSpan={showRunningBalance ? 2 : 1}>
-                                {fmtUSD(creditTotal)}
-                            </td>
-                        </tr>
-                    </tbody>
-                )}
+                <tbody>
+                    <tr className={styles.group}>
+                        <td colSpan={showRunningBalance ? 4 : 3}>Summary</td>
+                    </tr>
+                    <Row
+                        label="Total Bill Out"
+                        amountCents={billOutC}
+                        affectsBalance={false}
+                        typeOverride="Info"
+                        note={notes?.billOut}
+                    />
+                </tbody>
 
-                {/* Debits */}
-                {debits.length > 0 && (
-                    <tbody>
-                        <tr className={styles.group}>
-                            <td colSpan={showRunningBalance ? 4 : 3}>Debits</td>
-                        </tr>
-                        {debits.map((item, i) => <Row key={`d-${i}`} item={item} />)}
-                        <tr className={styles.subtotal}>
-                            <td colSpan={showRunningBalance ? 2 : 2}>Subtotal debits</td>
-                            <td className={`${styles.right} ${styles.neg}`} colSpan={showRunningBalance ? 2 : 1}>
-                                {fmtUSD(debitTotal)}
-                            </td>
-                        </tr>
-                    </tbody>
-                )}
+                <tbody>
+                    <tr className={styles.group}>
+                        <td colSpan={showRunningBalance ? 4 : 3}>Credits</td>
+                    </tr>
+                    <Row
+                        label="Split Amount"
+                        amountCents={splitC}
+                        note={notes?.split}
+                    />
+                    <tr className={styles.subtotal}>
+                        <td colSpan={showRunningBalance ? 2 : 2}>Subtotal credits</td>
+                        <td className={`${styles.right} ${styles.pos}`} colSpan={showRunningBalance ? 2 : 1}>
+                            {fmtUSDc(creditTotalC)}
+                        </td>
+                    </tr>
+                </tbody>
 
-                {/* Net / Commission */}
+                <tbody>
+                    <tr className={styles.group}>
+                        <td colSpan={showRunningBalance ? 4 : 3}>Debits</td>
+                    </tr>
+                    <Row label="Adjustments" amountCents={adjustmentsC} note={notes?.adjustments} />
+                    <Row
+                        label="Draws"
+                        amountCents={drawsC}
+                        note={notes?.draws}
+                        forceNegativeStyle
+                    />
+                    <tr className={styles.subtotal}>
+                        <td colSpan={showRunningBalance ? 2 : 2}>Subtotal debits</td>
+                        <td className={`${styles.right} ${styles.neg}`} colSpan={showRunningBalance ? 2 : 1}>
+                            {fmtUSDc(debitTotalC)}
+                        </td>
+                    </tr>
+                </tbody>
+
                 <tfoot>
                     <tr className={styles.net}>
                         <td colSpan={showRunningBalance ? 2 : 2}>Monthly commission check</td>
-                        <td className={`${styles.right} ${net < 0 ? styles.neg : styles.pos}`} colSpan={showRunningBalance ? 2 : 1}>
-                            {fmtUSD(net)}
+                        <td className={`${styles.right} ${netC < 0 ? styles.neg : styles.pos}`} colSpan={showRunningBalance ? 2 : 1}>
+                            {fmtUSDc(netC)}
                         </td>
                     </tr>
                 </tfoot>
             </table>
-
-            <footer className={styles.footnotes}>
-                <div className={styles.legend}>
-                    <span className={`${styles.bullet} ${styles.credit}`} /> Credit (money in)&nbsp;&nbsp;
-                    <span className={`${styles.bullet} ${styles.debit}`} /> Debit (money out)
-                </div>
-                <div className={styles.small}>
-                    Notes: “70% split amount” is calculated from Total bill out × 0.70. Adjustments and draws reduce the net.
-                </div>
-            </footer>
         </section>
     );
 }

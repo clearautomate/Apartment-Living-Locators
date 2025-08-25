@@ -42,7 +42,7 @@ async function main() {
                 commission: faker.number.float({ min: 50, max: 500, fractionDigits: 2 }),
                 createdAt: date,
                 // userId: user.id,
-                userId: "a1c113e6-a188-40ae-8d07-534140355570"
+                userId: "ff17a0ef-42ae-4e18-8bc5-5be06f8e19c6"
             },
         });
     }

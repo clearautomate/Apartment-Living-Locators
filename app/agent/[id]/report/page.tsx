@@ -19,7 +19,9 @@ import LogsClient from "./LogsClient";
 import DrawsClient from "./DrawsClient";
 import AdjustmentsClient from "./AdjustmentsClient";
 import DownloadReportButton from "@/app/Components/DownloadReportButton/DownloadReportButton";
-import styles from './styles.module.css'
+import styles from "./styles.module.css";
+import { getMonthAndYear } from "@/lib/getMonthAndYear";
+import { prisma } from "@/lib/prisma";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -27,6 +29,10 @@ interface Props {
     params: Promise<{ id: string }>;
     searchParams: Promise<SearchParams>;
 }
+
+// exact-money helpers (avoid float drift)
+const toCents = (n: number) => Math.round(n * 100);
+const fromCents = (c: number) => c / 100;
 
 export default async function Page(props: Props) {
     const user = await withUser();
@@ -37,6 +43,11 @@ export default async function Page(props: Props) {
         redirect("/unauthorized");
     }
     if (user.permissions === "agent" && user.id !== id) throw new Error("Forbidden");
+
+    const agent = await prisma.user.findUnique({
+        where: { id },
+        select: { fname: true, lname: true },
+    });
 
     const isOwner = user.permissions === "owner";
 
@@ -57,33 +68,62 @@ export default async function Page(props: Props) {
         onDelete: isOwner ? onDeleteDraw.bind(null, id) : undefined,
     };
 
-    const items = [
-        { label: "Total bill out", amount: 2000.38 },
-        { label: "70% split amount", amount: 300.5, note: "70% of revenue" },
-        { label: "Adjustment To Check", amount: -1000.0, note: "Chargeback – Lease #12345" },
-        { label: "Total $ of draws", amount: -2000.0, note: "YTD draws applied" },
-    ];
+    // Totals
+    const totalBillOut = logRows.reduce((sum, row) => sum + (row.commission ?? 0), 0);
+    const totalDraws = drawRows.reduce((sum, row) => sum + (row.amount ?? 0), 0);
+
+    // 🔢 Calculate split HERE (in dollars, safely via cents)
+    const SPLIT_PERCENT = 0.70;
+    const splitAmount = fromCents(Math.round(toCents(totalBillOut) * SPLIT_PERCENT));
+
+    // If you want to compute adjustments from rows instead of hardcoding 1000, do:
+    // const totalAdjustments = adjustmentRows.reduce((sum, row) => sum + (row.amount ?? 0), 0);
+    const totalAdjustments = 1000;
+
+    const { month, year } = getMonthAndYear(
+        Number(sp.month),
+        Number(sp.year)
+    );
+
+    const agentName = `${agent?.fname ?? ""} ${agent?.lname ?? ""}`.trim();
 
     return (
         <>
             <div className={`page-width ${styles.downloadBtn}`}>
-                <DownloadReportButton />
+                <DownloadReportButton
+                    data={{
+                        agent: agentName,
+                        period: `${month} ${year}`,
+                        totalBillOut,
+                        totalAdjustments,
+                        totalDraws,
+                        splitAmount,
+                    }}
+                />
             </div>
 
             <div className="page-width section">
                 <AgentReport
-                    agent="John Agent"
-                    period="August 2025"
-                    items={items}
+                    agent={agentName}
+                    period={`${month} ${year}`}
                     showRunningBalance={true}
+                    totals={{
+                        totalBillOut,
+                        totalAdjustments,
+                        totalDraws,
+                        splitAmount,
+                    }}
                 />
             </div>
+
             <div className="page-width section">
                 <LogsClient role={user.permissions} rows={logRows} actions={logActions} />
             </div>
+
             <div className="page-width section">
                 <AdjustmentsClient role={user.permissions} rows={adjustmentRows} actions={logActions} />
             </div>
+
             <div className="page-width section">
                 <DrawsClient role={user.permissions} rows={drawRows} actions={drawActions} />
             </div>

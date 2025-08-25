@@ -46,7 +46,7 @@ export default function Navbar({ permissions, id }: Props) {
                         {permissions === "agent" && (
                             <>
                                 <Link
-                                    href={`/agent/${id}/logs`}
+                                    href={`/agent/${id}/overview`}
                                     className={isActive("/agent") ? styles.active : ""}
                                 >
                                     Me

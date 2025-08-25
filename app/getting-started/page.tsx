@@ -124,7 +124,7 @@ export default async function GettingStartedPage() {
                     <div className={styles.tips}>
                         {tips.map((tip, i) => (
                             <div className={styles.tip} key={i}>
-                                < HiOutlineChevronRight size={24}/>
+                                < HiOutlineChevronRight size={24} />
                                 <p>{tip}</p>
                             </div>
                         ))}

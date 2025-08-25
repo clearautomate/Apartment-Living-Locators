@@ -5,14 +5,16 @@ import ExcelJS from 'exceljs';
 
 const usdFmt = '$#,##0.00;[Red]-$#,##0.00';
 
-export async function exportReport(): Promise<{ filename: string; base64: string }> {
-    // --- fake numbers to match your mock ---
-    const totalBillOut = 2000.38;
-    const splitPct = 0.70;
-    const splitAmount = 300.50;
-    const adjustmentToCheck = -1000.0;
-    const totalDraws = -2000.0;
+type Data = {
+    agent: string,
+    period: string,
+    totalBillOut: number,
+    totalAdjustments: number,
+    totalDraws: number,
+    splitAmount: number,
+}
 
+export async function exportReport(data: Data): Promise<{ filename: string; base64: string }> {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Agent Payout Report', { properties: { tabColor: { argb: 'FFDCE6F1' } } });
 
@@ -30,8 +32,8 @@ export async function exportReport(): Promise<{ filename: string; base64: string
     ws.getCell('A1').alignment = { vertical: 'middle' };
     ws.getRow(1).height = 22;
 
-    ws.getCell('A2').value = 'Agent'; ws.getCell('B2').value = 'John Agent';
-    ws.getCell('A3').value = 'Period'; ws.getCell('B3').value = 'August 2025';
+    ws.getCell('A2').value = 'Agent'; ws.getCell('B2').value = data.agent;
+    ws.getCell('A3').value = 'Period'; ws.getCell('B3').value = data.period;
     ws.getCell('A4').value = 'Generated'; ws.getCell('B4').value = new Date().toLocaleString();
 
     // Spacer
@@ -75,15 +77,15 @@ export async function exportReport(): Promise<{ filename: string; base64: string
 
     // CREDITS
     section('CREDITS');
-    add('Credit', 'Total bill out', totalBillOut, { color: 'credit' });
-    add('Credit', '70% split amount – 70% of revenue', splitAmount, { color: 'credit' });
+    add('Credit', 'Total bill out', data.totalBillOut, { color: 'credit' });
+    add('Credit', '70% split amount – 70% of revenue', data.splitAmount, { color: 'credit' });
     subtotal('Subtotal credits', running);
 
     // DEBITS
     section('DEBITS');
-    add('Debit', 'Adjustment To Check – Chargeback – Lease #12345', adjustmentToCheck, { color: 'debit' });
-    add('Debit', 'Total $ of draws – YTD draws applied', totalDraws, { color: 'debit' });
-    subtotal('Subtotal debits', adjustmentToCheck + totalDraws);
+    add('Debit', 'Adjustment To Check – Chargeback – Lease #12345', data.totalAdjustments, { color: 'debit' });
+    add('Debit', 'Total $ of draws – YTD draws applied', data.totalDraws, { color: 'debit' });
+    subtotal('Subtotal debits', data.totalAdjustments + data.totalDraws);
 
     // Final line
     const final = ws.addRow(['', 'Monthly commission check', null, running]);

@@ -48,7 +48,7 @@ export default function Users({ users, permissions }: Props) {
                             : (e.target as HTMLSelectElement).value;
 
                     if (next) {
-                        router.push(`/agent/${next}/logs${suffix}`);
+                        router.push(`/agent/${next}/overview${suffix}`);
                     } else {
                         router.push(`/agent${suffix}`);
                     }

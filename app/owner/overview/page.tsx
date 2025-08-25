@@ -20,7 +20,7 @@ export default async function OwnerOverview() {
     // const monthStr = pickParam(searchParams?.month); // e.g. "08"
     // const yearStr = pickParam(searchParams?.year);   // e.g. "2025"
 
-        const monthStr = "08"; // e.g. "08"
+    const monthStr = "08"; // e.g. "08"
     const yearStr = "2025";   // e.g. "2025"
 
     let month01 = Number.parseInt(monthStr, 10);
