@@ -1,8 +1,11 @@
 import { prisma } from "../prisma";
 import type { LogRow } from "../table/configs/log";
 
+type SearchParams = Record<string, string | string[] | undefined>;
+
 interface Props {
     userId: string;
+    searchParams?: SearchParams;
 }
 
 /** 90-day cutoff: anything <= cutoff is 90+ days old (overdue); > cutoff is 89 days or less (upcoming). */
@@ -12,7 +15,7 @@ function ninetyDayCutoff(): Date {
     return cutoff;
 }
 
-export async function listOverdue({ userId }: Props): Promise<LogRow[]> {
+export async function listOverdue({ userId, searchParams }: Props): Promise<LogRow[]> {
     const cutoff = ninetyDayCutoff();
 
     const rows = await prisma.lease.findMany({
@@ -32,7 +35,7 @@ export async function listOverdue({ userId }: Props): Promise<LogRow[]> {
     })) as LogRow[];
 }
 
-export async function listUpcoming({ userId }: Props): Promise<LogRow[]> {
+export async function listUpcoming({ userId, searchParams }: Props): Promise<LogRow[]> {
     const cutoff = ninetyDayCutoff();
 
     const rows = await prisma.lease.findMany({
@@ -52,7 +55,7 @@ export async function listUpcoming({ userId }: Props): Promise<LogRow[]> {
     })) as LogRow[];
 }
 
-export async function listPast({ userId }: Props): Promise<LogRow[]> {
+export async function listPast({ userId, searchParams }: Props): Promise<LogRow[]> {
     const cutoff = ninetyDayCutoff();
 
     const rows = await prisma.lease.findMany({

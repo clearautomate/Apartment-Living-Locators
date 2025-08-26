@@ -325,17 +325,28 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                             {mode === "edit" && canUpdate && (
                                 <input type="hidden" name="id" value={String(current.id)} readOnly />
                             )}
-                            {visibleColumns.map((c) => (
-                                <Field key={c.key} label={c.label} htmlFor={c.key} requiredMark={!!c.required}>
-                                    {renderInput(c.key)}
-                                </Field>
-                            ))}
+                            {visibleColumns
+                                .filter((c) => mode === "create" || canEditKey(c.key)) // only show editable fields in edit mode
+                                .map((c) => (
+                                    <Field
+                                        key={c.key}
+                                        label={c.label}
+                                        htmlFor={c.key}
+                                        requiredMark={!!c.required}
+                                    >
+                                        {renderInput(c.key)}
+                                    </Field>
+                                ))}
                             <FormError message={msg} />
                             <FormActions align="right">
-                                <Button variant="destructive" type="button" onClick={() => setOpen(false)} disabled={busy}>
+                                <Button
+                                    variant="destructive"
+                                    type="button"
+                                    onClick={() => setOpen(false)}
+                                    disabled={busy}
+                                >
                                     Cancel
                                 </Button>
-                                {/* Submit label adapts to mode */}
                                 <Button type="submit" disabled={busy}>
                                     {busy ? "Saving…" : mode === "create" ? "Create" : "Save"}
                                 </Button>

@@ -43,7 +43,7 @@ export default function LoginPage() {
                     <img className={styles.background} src='/abstract.png' />
                     <div className={styles.portalText}>
                         {/* <Image className={styles.logo} src='/alllogo.png' alt="logo" width={291 / 3} height={164 / 3} /> */}
-                        <h1>Apartment Living Locators Portal</h1>
+                        <h1 className={styles.portalTitle}>Apartment Living Locators Portal</h1>
                     </div>
                 </div>
                 <div className={styles.login}>

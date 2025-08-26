@@ -75,6 +75,10 @@
     color: var(--danger);
 }
 
+.info {
+    color: var(--info);
+}
+
 .balance {
     text-align: right;
     font-weight: 500;

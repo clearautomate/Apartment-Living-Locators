@@ -17,7 +17,6 @@
 .links {
     display: flex;
     gap: 1rem;
-    color: var(--bg-dark);
     transition: var(--transition-s);
 }
 

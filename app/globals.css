@@ -135,3 +135,68 @@ body {
 .card p {
   color: var(--text-muted);
 }
+
+.header {
+  margin-bottom: 1rem;
+}
+
+
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text);
+  line-height: 1.2;
+  margin-bottom: 0.2em;
+}
+
+h1 {
+  font-size: 2.25rem;
+  /* ~36px */
+}
+
+h2 {
+  font-size: 1.875rem;
+  /* ~30px */
+}
+
+h3 {
+  font-size: 1.5rem;
+  /* ~24px */
+}
+
+h4 {
+  font-size: 1.25rem;
+  /* ~20px */
+}
+
+h5 {
+  font-size: 1.125rem;
+  /* ~18px */
+}
+
+h6 {
+  font-size: 1rem;
+  /* ~16px */
+  font-weight: 500;
+  color: #444;
+}
+
+p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+::selection {
+  background: var(--secondary);
+  color: var(--text);
+}
+
+::-moz-selection {
+  background: var(--secondary);
+  color: var(--text);
+}

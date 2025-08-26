@@ -38,7 +38,7 @@ export default async function Page(props: Props) {
         }
     })
 
-    return (
+return (
         <div className="page-width section">
             <h2>Hello Agent {agent?.fname} {agent?.lname}</h2>
             <p>Peroid: {month} {year}</p>

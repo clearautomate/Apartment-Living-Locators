@@ -24,7 +24,8 @@ export default function Navbar({ permissions, id }: Props) {
             <div className={`${styles.content} page-width`}>
                 <div className={styles.left}>
                     {/* Logo (never active) */}
-                    <Link href="/getting-started">
+                    <Link
+                        color="var(--bg-dark)" href="/getting-started">
                         <Image
                             src="/alllogo.png"
                             alt="logo"
@@ -37,6 +38,7 @@ export default function Navbar({ permissions, id }: Props) {
                     <div className={styles.links}>
                         {/* Always visible */}
                         <Link
+                            color="var(--bg-dark)"
                             href="/getting-started"
                             className={isActive("/getting-started") ? styles.active : ""}
                         >
@@ -46,6 +48,7 @@ export default function Navbar({ permissions, id }: Props) {
                         {permissions === "agent" && (
                             <>
                                 <Link
+                                    color="var(--bg-dark)"
                                     href={`/agent/${id}/overview`}
                                     className={isActive("/agent") ? styles.active : ""}
                                 >
@@ -58,18 +61,21 @@ export default function Navbar({ permissions, id }: Props) {
                         {permissions === "owner" && (
                             <>
                                 <Link
+                                    color="var(--bg-dark)"
                                     href="/owner/overview"
                                     className={isActive("/owner/overview") ? styles.active : ""}
                                 >
                                     Overview
                                 </Link>
                                 <Link
+                                    color="var(--bg-dark)"
                                     href="/agent"
                                     className={isActive("/agent") ? styles.active : ""}
                                 >
                                     Agents
                                 </Link>
                                 <Link
+                                    color="var(--bg-dark)"
                                     href="/owner/manage-users"
                                     className={isActive("/owner/manage-users") ? styles.active : ""}
                                 >

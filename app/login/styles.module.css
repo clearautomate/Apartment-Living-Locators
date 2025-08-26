@@ -58,3 +58,7 @@
         display: none;
     }
 }
+
+.portalTitle {
+    color: var(--bg-light);
+}

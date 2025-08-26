@@ -29,6 +29,8 @@
     background: var(--bg-lighter);
     border: 1px solid var(--border);
     border-radius: var(--corners);
+    display: flex;
+    flex-direction: column;
 }
 
 .icon {
@@ -42,7 +44,15 @@
 }
 
 .link {
-    margin-top: 1rem;
+    margin-top: auto;
+    padding-top: 1rem;
+    font-size: 0.8rem;
+    align-self: flex-end;
+    text-decoration: none;
+}
+
+.link:hover {
+    text-decoration: underline !important;
 }
 
 .tips {
@@ -52,7 +62,13 @@
 }
 
 .tip {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    /* align-items: flex-start; */
     gap: 0.5rem;
+}
+
+.tip svg {
+    color: var(--text-muted);
+    margin-top: 4px;
 }

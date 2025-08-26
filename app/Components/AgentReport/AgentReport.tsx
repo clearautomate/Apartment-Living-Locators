@@ -80,7 +80,7 @@ export default function AgentReport({
                     <div className={styles.label}>{label}</div>
                     {note ? <div className={styles.note}>{note}</div> : null}
                 </td>
-                <td className={`${styles.amt} ${isDebit ? styles.neg : styles.pos}`}>
+                <td className={`${styles.amt} ${typeOverride ? styles.info : (isDebit ? styles.neg : styles.pos)}`}>
                     {fmtUSDc(amountCents)}
                 </td>
                 {showRunningBalance && (
