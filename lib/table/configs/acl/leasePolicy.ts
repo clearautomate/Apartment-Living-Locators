@@ -11,12 +11,13 @@ type Log = z.infer<typeof LogSchema>;
 type LogField = keyof Log;
 
 export const logFieldPolicy = {
-    id: { read: ["owner", "agent"], write: ["owner", "agent"] },
+    id: { read: ["owner", "agent"], write: [] },
     moveInDate: { read: ["owner", "agent"], write: ["owner", "agent"] },
     invoiceNumber: { read: ["owner", "agent"], write: ["owner", "agent"] },
     complex: { read: ["owner", "agent"], write: ["owner", "agent"] },
     tenantFname: { read: ["owner", "agent"], write: ["owner", "agent"] },
     tenantLname: { read: ["owner", "agent"], write: ["owner", "agent"] },
+    tenantEmail: { read: ["owner", "agent"], write: ["owner", "agent"] },
     apartmentNumber: { read: ["owner", "agent"], write: ["owner", "agent"] },
     rentAmount: { read: ["owner", "agent"], write: ["owner", "agent"] },
     commissionType: { read: ["owner", "agent"], write: ["owner", "agent"] },

@@ -34,14 +34,6 @@ export const userColumns: ColumnDef<UserRow>[] = [
             { value: "agent", label: "Agent" },
         ],
     },
-    // {
-    //     key: "createdAt",
-    //     label: "Created",
-    //     input: "text",
-    //     format: (v) =>
-    //         v ? new Intl.DateTimeFormat("en-US", { dateStyle: "short", timeStyle: "short" })
-    //             .format(new Date(String(v))) : "",
-    // },
 ];
 
 export const userTableConfig: TableConfig<UserRow> = {

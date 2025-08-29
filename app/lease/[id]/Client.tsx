@@ -2,9 +2,8 @@
 "use client";
 import { CudTable } from "@/app/Components/CudTable/CudTable";
 import type { Role } from "@/lib/table/types";
-import { logTableConfig } from "@/lib/table/configs/log";
-import type { LogRow } from "@/lib/table/configs/log";
 import type { ActionResult } from "@/app/Components/CudTable/CudTable";
+import { PaymentRow, paymentTableConfig } from "@/lib/table/configs/payment";
 
 type Actions = {
     onCreate: (form: FormData) => Promise<ActionResult>;
@@ -18,18 +17,17 @@ export default function Client({
     actions,
 }: {
     role: Role;
-    rows: LogRow[];
+    rows: PaymentRow[];
     actions: Actions;
 }) {
     return (
         <CudTable
-            config={logTableConfig}
+            config={paymentTableConfig}
             role={role}
             rows={rows}
             actions={actions}
-            tableName="Lease"
+            tableName="Payments"
             allowCreate
-            link="/lease"
         />
     );
 }

@@ -8,6 +8,7 @@ export const LogSchema = z.object({
     complex: z.string().min(1),
     tenantFname: z.string().min(1),
     tenantLname: z.string().min(1),
+    tenantEmail: z.email().nullable().optional(),
     apartmentNumber: z.string().min(1),
     rentAmount: z.coerce.number().positive(),
     commissionType: z.enum(["flat", "percent"]),
@@ -26,6 +27,7 @@ export const logColumns: ColumnDef<LogRow>[] = [
     { key: "complex", label: "Complex", input: "text", editableBy: ["owner", "agent"], required: true },
     { key: "tenantFname", label: "First", input: "text", editableBy: ["owner", "agent"], required: true },
     { key: "tenantLname", label: "Last", input: "text", editableBy: ["owner", "agent"], required: true },
+    { key: "tenantEmail", label: "Email", input: "text", editableBy: ["owner", "agent"] },
     { key: "apartmentNumber", label: "Apt", input: "text", editableBy: ["owner", "agent"], required: true },
 
     {
@@ -91,9 +93,8 @@ export const logColumns: ColumnDef<LogRow>[] = [
         options: [
             { value: "unpaid", label: "Unpaid" },
             { value: "paid", label: "Paid" },
-            { value: "goingToPay", label: "Going to Pay" },
-            { value: "chargeback", label: "Chargeback" },
             { value: "partially", label: "Partially" },
+            { value: "chargeback", label: "Chargeback" },
         ],
     },
 
@@ -105,17 +106,7 @@ export const logColumns: ColumnDef<LogRow>[] = [
         required: true,
         format: (v) => (v ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(String(v))) : ""),
     },
-
-    { key: "extraNotes", label: "Notes", input: "text", editableBy: ["owner", "agent"] },
-
-    {
-        key: "createdAt",
-        label: "Created",
-        input: "text",
-        format: (v) => (v
-            ? new Intl.DateTimeFormat("en-US", { dateStyle: "short", timeStyle: "short" }).format(new Date(String(v)))
-            : ""),
-    },
+    { key: "extraNotes", label: "Notes", input: "text", editableBy: ["owner", "agent"] }
 ];
 
 export const logTableConfig: TableConfig<LogRow> = {

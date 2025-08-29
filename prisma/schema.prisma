@@ -4,9 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgres"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgres"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -37,14 +36,20 @@ model Lease {
   complex           String
   tenantFname       String
   tenantLname       String
+  tenantEmail       String?
   apartmentNumber   String
   rentAmount        Float
   commissionType    CommissionType
   commissionPrecent Float?
   commission        Float
   extraNotes        String?
-  paidStatus        PaidStatus     @default(unpaid)
-  createdAt         DateTime       @default(now())
+
+  paidStatus     PaidStatus @default(unpaid)
+  totalPaid      Float?
+  paidDifference Float?
+  Payment        Payment[]
+
+  createdAt DateTime @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
@@ -58,9 +63,20 @@ enum CommissionType {
 enum PaidStatus {
   unpaid
   paid
-  goingToPay
-  chargeback
   partially
+  chargeback
+}
+
+model Payment {
+  id      String @id @default(uuid())
+  leaseId String
+  lease   Lease  @relation(fields: [leaseId], references: [id])
+
+  amount Float
+  date   DateTime @default(now())
+  notes  String?
+
+  createdAt DateTime @default(now())
 }
 
 model Draw {

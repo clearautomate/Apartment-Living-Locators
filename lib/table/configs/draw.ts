@@ -27,17 +27,7 @@ export const drawColumns: ColumnDef<DrawRow>[] = [
         required: true,
         format: (v) => (v ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(String(v))) : ""),
     },
-    { key: "amount", label: "Amount", input: "number", editableBy: ["owner"], required: true, format: fmtUSD },
-    {
-        key: "createdAt",
-        label: "Created",
-        input: "text",
-        format: (v) =>
-            v
-                ? new Intl.DateTimeFormat("en-US", { dateStyle: "short", timeStyle: "short" })
-                    .format(new Date(String(v)))
-                : "",
-    },
+    { key: "amount", label: "Amount", input: "number", editableBy: ["owner"], required: true, format: fmtUSD }
 ];
 
 export const drawTableConfig: TableConfig<DrawRow> = {

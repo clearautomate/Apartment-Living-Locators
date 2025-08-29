@@ -132,15 +132,13 @@ body {
   color: var(--text);
 }
 
-.card p {
+/* .card p {
   color: var(--text-muted);
-}
+} */
 
 .header {
   margin-bottom: 1rem;
 }
-
-
 
 h1,
 h2,

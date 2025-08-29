@@ -16,10 +16,10 @@ import { Field, Form, FormActions, FormError } from "../UI/Form/Form";
 import { Input } from "../UI/Input/Input";
 import { Dropdown } from "../UI/Dropdown/Dropdown";
 import { HiOutlinePencilSquare, HiOutlinePlus, HiOutlineTrash } from "react-icons/hi2";
+import Link from "../UI/Link/Link";
 
 export type ActionResult = { ok: boolean; message: string };
 
-// Each action is now optional and may be null.
 export type ActionHandlers<TRow extends { id: string }> = {
     onCreate?: ((form: FormData) => Promise<ActionResult>) | null;
     onUpdate?: ((id: string, form: FormData) => Promise<ActionResult>) | null;
@@ -30,10 +30,11 @@ type Props<TRow extends { id: string }> = {
     config: TableConfig<TRow>;
     role: Role;
     rows: TRow[];
-    actions?: ActionHandlers<TRow> | null; // actions object itself can be omitted/null
+    actions?: ActionHandlers<TRow> | null;
     tableName?: string;
     allowCreate?: boolean;
-    creationDefaults?: Partial<TRow>; // may be undefined
+    creationDefaults?: Partial<TRow>;
+    link?: string; // 👈 new: e.g. "./lease" → /lease/[id]
 };
 
 export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
@@ -45,6 +46,7 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         tableName = "Items",
         allowCreate = true,
         creationDefaults,
+        link,
     } = props;
 
     const canCreate = Boolean(actions?.onCreate) && allowCreate;
@@ -113,15 +115,29 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(s) && !/[zZ]$/.test(s);
     }
 
-    function renderCell(row: TRow, key: keyof TRow & string) {
+    function renderCell(row: TRow, key: keyof TRow & string, isFirst: boolean) {
         const col = config.columns.find((c) => c.key === key)!;
         const raw = (row as any)[key];
-        if (col.format) return col.format(raw, row);
-        if (col.options && Array.isArray(col.options)) {
+        let content: React.ReactNode;
+
+        if (col.format) content = col.format(raw, row);
+        else if (col.options && Array.isArray(col.options)) {
             const opt = col.options.find((o) => String(o.value) === String(raw));
-            return opt ? opt.label : (raw ?? "");
+            content = opt ? opt.label : (raw ?? "");
+        } else {
+            content = raw == null ? "" : String(raw);
         }
-        return raw == null ? "" : String(raw);
+
+        // 👇 Wrap first column with link if link prop exists
+        if (isFirst && link) {
+            return (
+                <Link href={`${link}/${row.id}`} className={styles.linkCell}>
+                    {content}
+                </Link>
+            );
+        }
+
+        return content;
     }
 
     function renderInput(colKey: keyof TRow & string) {
@@ -213,7 +229,7 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
     }
 
     async function onDelete(id: string) {
-        if (!actions?.onDelete) return; // no button renders if not available
+        if (!actions?.onDelete) return;
         if (!confirm("Delete this item?")) return;
         setBusy(true);
         setMsg(null);
@@ -254,9 +270,9 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                         <tbody>
                             {rows.map((r) => (
                                 <tr key={r.id}>
-                                    {visibleColumns.map((c) => (
+                                    {visibleColumns.map((c, idx) => (
                                         <td key={c.key} className={styles.td}>
-                                            {renderCell(r, c.key)}
+                                            {renderCell(r, c.key, idx === 0)}
                                         </td>
                                     ))}
                                     {hasRowActions && (
@@ -299,7 +315,6 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                 </div>
             </div>
 
-            {/* Only render the dialog if at least one of create/update is available */}
             {(canCreate || canUpdate) && (
                 <Dialog
                     open={isOpen}
@@ -326,7 +341,7 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                                 <input type="hidden" name="id" value={String(current.id)} readOnly />
                             )}
                             {visibleColumns
-                                .filter((c) => mode === "create" || canEditKey(c.key)) // only show editable fields in edit mode
+                                .filter((c) => mode === "create" || canEditKey(c.key))
                                 .map((c) => (
                                     <Field
                                         key={c.key}
