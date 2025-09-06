@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "./Components/UI/Toast/Toast";
-import AutoProgress from "./Providers/AutoProgress/AutoProgress";
 import { Suspense } from "react";
 
 const poppins = Poppins({
@@ -24,13 +23,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${poppins.variable}`}>
-        <AutoProgress>
           <ToastProvider>
             <Suspense fallback={<div>Loading...</div>}>
               {children}
             </Suspense>
           </ToastProvider>
-        </AutoProgress>
       </body>
     </html>
   );
