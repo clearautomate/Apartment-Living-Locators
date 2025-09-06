@@ -3,7 +3,7 @@
 import styles from "./styles.module.css";
 import { Dropdown } from "../UI/Dropdown/Dropdown";
 import { Button } from "../UI/Button/Button";
-const Links = dynamic(() => import("./Links"), { ssr: true });
+const Links = dynamic(() => import("./Links"), { ssr: false });
 import { HiOutlineFilter } from "react-icons/hi";
 import Users from "./Users";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";

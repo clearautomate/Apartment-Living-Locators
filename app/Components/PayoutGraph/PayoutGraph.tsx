@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getMonthCutoffs } from "@/lib/getMonthAndYear";
 import { PaymentType } from "@/app/generated/prisma"; // enum: advance | full | partial | chargeback
 
-const PayoutGraphClient = dynamic(() => import("./PayoutGraphClient"), { ssr: true });
+const PayoutGraphClient = dynamic(() => import("./PayoutGraphClient"), { ssr: false });
 
 type SP = { month?: string | number; year?: string | number };
 
