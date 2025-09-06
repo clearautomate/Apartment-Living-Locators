@@ -26,7 +26,7 @@ export default function RootLayout({
       <body className={`${poppins.variable}`}>
         <AutoProgress>
           <ToastProvider>
-            <Suspense>
+            <Suspense fallback={<div>Loading...</div>}>
               {children}
             </Suspense>
           </ToastProvider>
