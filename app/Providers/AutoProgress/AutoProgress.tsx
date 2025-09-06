@@ -1,7 +1,7 @@
 // app/providers/AutoProgress.tsx
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { progressRef } from './progressRef';
 
@@ -271,7 +271,7 @@ export default function AutoProgress({ children }: { children: React.ReactNode }
     }, []);
 
     return (
-        <>
+        <Suspense fallback={null}>
             <div
                 aria-hidden
                 style={{
@@ -289,6 +289,6 @@ export default function AutoProgress({ children }: { children: React.ReactNode }
                 }}
             />
             {children}
-        </>
+        </Suspense>
     );
 }
