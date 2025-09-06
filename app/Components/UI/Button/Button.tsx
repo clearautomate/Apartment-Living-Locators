@@ -1,13 +1,13 @@
-// components/ui/button.tsx
+"use client";
+
 import * as React from "react";
 import styles from "./styles.module.css";
 
 export interface ButtonProps
     extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-    variant?: "default" | "outline" | "destructive";
+    variant?: "default" | "outline";
     size?: "sm" | "md" | "lg";
-    color?: "primary" | "bg" | "text" | (string & {}); // presets or custom hex/name
-
+    color?: "primary" | "bg" | "bgLight" | "text" | (string & {});
     loading?: boolean;
     fullWidth?: boolean;
     icon?: React.ReactNode;
@@ -16,6 +16,20 @@ export interface ButtonProps
 
 function cx(...args: Array<string | false | undefined>) {
     return args.filter(Boolean).join(" ");
+}
+
+// Centralize the preset color classes once
+const PRESET_COLOR_CLASS = {
+    primary: styles.color_primary,
+    bg: styles.color_bg,
+    bgLight: styles.color_bg_light,
+    text: styles.color_text,
+} as const;
+
+type PresetColor = keyof typeof PRESET_COLOR_CLASS;
+
+function isPresetColor(c: ButtonProps["color"]): c is PresetColor {
+    return typeof c === "string" && c in PRESET_COLOR_CLASS;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -31,24 +45,21 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             icon,
             iconPosition = "left",
             disabled,
+            style,
             ...props
         },
         ref
     ) => {
-        const isCustom =
-            typeof color === "string" &&
-            color !== "primary" &&
-            color !== "bg" &&
-            color !== "text";
+        const isPreset = isPresetColor(color);
+        const colorClass = isPreset ? PRESET_COLOR_CLASS[color] : styles.color_custom;
 
-        const colorClass =
-            color === "primary"
-                ? styles.color_primary
-                : color === "bg"
-                    ? styles.color_bg
-                    : color === "text"
-                        ? styles.color_text
-                        : styles.color_custom;
+        // Only set the CSS var for custom colors
+        const mergedStyle: React.CSSProperties = isPreset
+            ? style || {}
+            : {
+                ...(style || {}),
+                ["--btn-color" as any]: color,
+            };
 
         return (
             <button
@@ -62,24 +73,36 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                     loading && styles.loading,
                     className
                 )}
-                style={isCustom ? ({ ["--btn-color" as any]: color } as React.CSSProperties) : undefined}
+                style={mergedStyle}
                 aria-busy={loading || undefined}
                 disabled={disabled || loading}
                 {...props}
             >
-                {/* content wrapper controls icon side */}
                 <span
                     className={cx(
                         styles.content,
                         iconPosition === "right" ? styles.iconRight : styles.iconLeft
                     )}
                 >
-                    {loading && <span className={styles.spinner} aria-hidden="true" />}
-                    {icon && <span className={styles.icon}>{icon}</span>}
-                    <span className={styles.label}>{children}</span>
+                    {icon && (
+                        <span
+                            className={cx(styles.icon, loading && styles.hiddenContent)}
+                            aria-hidden={loading || undefined}
+                        >
+                            {icon}
+                        </span>
+                    )}
+                    <span
+                        className={cx(styles.label, loading && styles.hiddenContent)}
+                        aria-hidden={loading || undefined}
+                    >
+                        {children}
+                    </span>
                 </span>
+                {loading && <span className={styles.spinnerOverlay} />}
             </button>
         );
     }
 );
+
 Button.displayName = "Button";

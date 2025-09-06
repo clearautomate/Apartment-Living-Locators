@@ -1,8 +1,8 @@
+// import PayoutGraph from "@/app/Components/PayoutGraph/PayoutGraph";
 import StatCard, { StatGrid } from "@/app/Components/UI/StatCard/StatCard";
 import { getMonthAndYear, getMonthCutoffs } from "@/lib/getMonthAndYear";
 import { prisma } from "@/lib/prisma";
-import { HiOutlineTrendingUp } from "react-icons/hi";
-import { HiOutlineCurrencyDollar, HiOutlineUser } from "react-icons/hi2";
+import { HiOutlineUser } from "react-icons/hi2";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -22,9 +22,8 @@ export default async function Page(props: Props) {
         Number(sp.year)
     );
 
-
     const agent = await prisma.user.findUnique({
-        where: { id },
+        where: { id, isDeleted: false },
         select: { fname: true, lname: true },
     });
 
@@ -38,31 +37,31 @@ export default async function Page(props: Props) {
         }
     })
 
-return (
+    return (
         <div className="page-width section">
-            <h2>Hello Agent {agent?.fname} {agent?.lname}</h2>
-            <p>Peroid: {month} {year}</p>
-            { }
-            <StatGrid desktopGridColumns={3} mobileGridColumns={1}>
-                <StatCard
-                    icon={<HiOutlineUser size={32} />}
-                    label="Total Leases"
-                    stat={totalLeases}
-                    hue={200}
-                />
-                <StatCard
-                    icon={<HiOutlineCurrencyDollar size={32} />}
-                    label="Upcoming Unpaid Leases"
-                    stat="$82,410"
-                    hue={120}
-                />
-                <StatCard
-                    icon={<HiOutlineTrendingUp size={32} />}
-                    label="Chargebacks"
-                    stat="12%"
-                    hue={30}
-                />
-            </StatGrid>
+            <div className="header">
+                <h2>Welcome back, {agent?.fname} {agent?.lname}</h2>
+                <p>Here's your latest update.</p>
+            </div>
+
+            <div className="section">
+                <StatGrid desktopGridColumns={3} mobileGridColumns={1}>
+                    <StatCard
+                        icon={<HiOutlineUser size={32} />}
+                        label="Total Leases"
+                        stat={totalLeases}
+                        hue={200}
+                    />
+                </StatGrid>
+            </div>
+
+            {/* <div className="section card">
+                <div className="header">
+                    <h2>Income</h2>
+                    <p>Peroid: motn</p>
+                </div>
+                <PayoutGraph id={id} sp={sp} showAdvances={false} height={320} />
+            </div> */}
         </div>
     );
 }

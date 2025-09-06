@@ -13,7 +13,6 @@ interface LayoutProps {
 export default async function Page({ params }: LayoutProps) {
     const user = await withUser();
 
-
     if (user.permissions !== 'owner') {
         redirect('/unauthorized');
     }
@@ -33,7 +32,7 @@ export default async function Page({ params }: LayoutProps) {
 
     return (
         <>
-            <Navbar permissions={user.permissions} id={user.id}/>
+            <Navbar permissions={user.permissions} id={user.id} />
             <AgentNavbar permissions={user.permissions} paramId={id} users={users} />
             <div className="page-width section">
                 <h2 style={{ textAlign: 'center' }}>Please select an agent to display their data.</h2>

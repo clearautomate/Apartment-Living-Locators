@@ -1,0 +1,51 @@
+.info {
+    display: flex;
+    gap: 1rem;
+}
+
+.leaseRow {
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--corners);
+    overflow: hidden;
+}
+
+.paymentTable {
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    width: 100%;
+    padding-left: 2rem;
+}
+
+.paymentTable thead {
+    background: hsl(0, 0%, 95%);
+}
+
+.paymentTable th,
+.paymentTable td {
+    padding: 0.5rem 0.75rem;
+    /* border-bottom: 1px solid var(--border); */
+    text-align: left;
+}
+
+.paymentTable th {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.leaseHeaderTable {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--border);
+}
+
+.leaseHeaderTable th,
+.leaseHeaderTable td {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    text-align: left;
+}
+
+.leaseHeaderTable th {
+    font-weight: 600;
+}

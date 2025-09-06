@@ -15,7 +15,12 @@ import {
 import { Field, Form, FormActions, FormError } from "../UI/Form/Form";
 import { Input } from "../UI/Input/Input";
 import { Dropdown } from "../UI/Dropdown/Dropdown";
-import { HiOutlinePencilSquare, HiOutlinePlus, HiOutlineTrash } from "react-icons/hi2";
+import {
+    HiOutlinePencilSquare,
+    HiOutlinePlus,
+    HiOutlineTrash,
+    HiOutlineExclamationTriangle,
+} from "react-icons/hi2";
 import Link from "../UI/Link/Link";
 
 export type ActionResult = { ok: boolean; message: string };
@@ -34,7 +39,7 @@ type Props<TRow extends { id: string }> = {
     tableName?: string;
     allowCreate?: boolean;
     creationDefaults?: Partial<TRow>;
-    link?: string; // 👈 new: e.g. "./lease" → /lease/[id]
+    link?: string; // e.g. "./lease" → /lease/[id]
 };
 
 export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
@@ -63,11 +68,18 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         [config.columns, role]
     );
 
+    // Edit/Create dialog state
     const [isOpen, setOpen] = React.useState(false);
     const [mode, setMode] = React.useState<"create" | "edit">("create");
     const [current, setCurrent] = React.useState<Partial<TRow>>({} as Partial<TRow>);
     const [busy, setBusy] = React.useState(false);
     const [msg, setMsg] = React.useState<string | null>(null);
+
+    // Delete confirm dialog state
+    const [deleteOpen, setDeleteOpen] = React.useState(false);
+    const [deleteBusy, setDeleteBusy] = React.useState(false);
+    const [deleteMsg, setDeleteMsg] = React.useState<string | null>(null);
+    const [deleteTarget, setDeleteTarget] = React.useState<TRow | null>(null);
 
     const mergeCurrent = React.useCallback((patch: Partial<TRow>) => {
         setCurrent((prev) => ({ ...prev, ...patch }));
@@ -88,6 +100,13 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         setMsg(null);
         setOpen(true);
         setCurrent({ ...row });
+    }
+
+    function openDelete(row: TRow) {
+        if (!canDelete) return;
+        setDeleteMsg(null);
+        setDeleteTarget(row);
+        setDeleteOpen(true);
     }
 
     function canEditKey(key: keyof TRow & string) {
@@ -128,10 +147,10 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
             content = raw == null ? "" : String(raw);
         }
 
-        // 👇 Wrap first column with link if link prop exists
+        // Wrap first column with link if link prop exists
         if (isFirst && link) {
             return (
-                <Link href={`${link}/${row.id}`} className={styles.linkCell}>
+                <Link color="primary" href={`${link}/${row.id}`} className={styles.linkCell}>
                     {content}
                 </Link>
             );
@@ -145,6 +164,7 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         const name = colKey;
         const disabled = !canEditKey(colKey) || busy;
         const required = !!col.required;
+        const placeholder = col.placeholder;
         const value = (current as any)[colKey];
 
         if (col.input === "number") {
@@ -156,6 +176,7 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                     disabled={disabled}
                     defaultValue={value ?? ""}
                     step="0.01"
+                    placeholder={placeholder}
                 />
             );
         }
@@ -191,6 +212,7 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                 required={required}
                 disabled={disabled}
                 defaultValue={value ?? ""}
+                placeholder={placeholder}
             />
         );
     }
@@ -228,19 +250,24 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         if (res.ok) setOpen(false);
     }
 
-    async function onDelete(id: string) {
-        if (!actions?.onDelete) return;
-        if (!confirm("Delete this item?")) return;
-        setBusy(true);
-        setMsg(null);
+    async function confirmDelete() {
+        if (!actions?.onDelete || !deleteTarget) return;
+        setDeleteBusy(true);
+        setDeleteMsg(null);
         let res: ActionResult;
         try {
-            res = await actions.onDelete(id);
+            res = await actions.onDelete(deleteTarget.id);
         } catch (err: any) {
             res = { ok: false, message: err?.message ?? "Delete failed" };
         }
-        setBusy(false);
-        if (!res.ok) setMsg(res.message);
+        setDeleteBusy(false);
+        if (!res.ok) {
+            setDeleteMsg(res.message);
+            return;
+        }
+        // Success: close and clear
+        setDeleteOpen(false);
+        setDeleteTarget(null);
     }
 
     return (
@@ -248,7 +275,7 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
             <div className={styles.header}>
                 <h2 className={styles.title}>{tableName}</h2>
                 {canCreate && (
-                    <Button onClick={openCreate} disabled={busy} icon={<HiOutlinePlus />}>
+                    <Button onClick={openCreate} disabled={busy || deleteBusy} color="text" icon={<HiOutlinePlus />}>
                         New
                     </Button>
                 )}
@@ -281,9 +308,7 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                                                 <Button
                                                     size="sm"
                                                     onClick={() => openEdit(r)}
-                                                    disabled={busy}
-                                                    variant="outline"
-                                                    icon={<HiOutlinePencilSquare />}
+                                                    disabled={busy || deleteBusy}
                                                 >
                                                     Edit
                                                 </Button>
@@ -291,10 +316,9 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                                             {canDelete && (
                                                 <Button
                                                     size="sm"
-                                                    onClick={() => onDelete(r.id)}
-                                                    disabled={busy}
-                                                    variant="destructive"
-                                                    icon={<HiOutlineTrash />}
+                                                    onClick={() => openDelete(r)}
+                                                    disabled={busy || deleteBusy}
+                                                    color="var(--danger)"
                                                 >
                                                     Delete
                                                 </Button>
@@ -305,7 +329,10 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                             ))}
                             {rows.length === 0 && (
                                 <tr>
-                                    <td colSpan={visibleColumns.length + (hasRowActions ? 1 : 0)} className={styles.empty}>
+                                    <td
+                                        colSpan={visibleColumns.length + (hasRowActions ? 1 : 0)}
+                                        className={styles.empty}
+                                    >
                                         No rows
                                     </td>
                                 </tr>
@@ -341,32 +368,84 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
                                 <input type="hidden" name="id" value={String(current.id)} readOnly />
                             )}
                             {visibleColumns
-                                .filter((c) => mode === "create" || canEditKey(c.key))
+                                .filter((c) => canEditKey(c.key))
                                 .map((c) => (
-                                    <Field
-                                        key={c.key}
-                                        label={c.label}
-                                        htmlFor={c.key}
-                                        requiredMark={!!c.required}
-                                    >
+                                    <Field key={c.key} label={c.label} htmlFor={c.key} requiredMark={!!c.required}>
                                         {renderInput(c.key)}
                                     </Field>
                                 ))}
                             <FormError message={msg} />
                             <FormActions align="right">
                                 <Button
-                                    variant="destructive"
+                                    color="bg"
                                     type="button"
                                     onClick={() => setOpen(false)}
                                     disabled={busy}
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={busy}>
-                                    {busy ? "Saving…" : mode === "create" ? "Create" : "Save"}
+                                <Button type="submit" loading={busy}>
+                                    {mode === "create" ? "Create" : "Save"}
                                 </Button>
                             </FormActions>
                         </Form>
+                    </DialogContent>
+                </Dialog>
+            )}
+
+            {/* Confirm Delete Dialog */}
+            {canDelete && (
+                <Dialog
+                    open={deleteOpen}
+                    onOpenChange={(o) => {
+                        if (deleteBusy) return;
+                        setDeleteOpen(o);
+                        if (!o) {
+                            setDeleteTarget(null);
+                            setDeleteMsg(null);
+                        }
+                    }}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle className={styles.deleteTitle}>
+                                <HiOutlineExclamationTriangle className={styles.deleteIcon} aria-hidden size={20} />
+                                Confirm deletion
+                            </DialogTitle>
+                            <DialogDescription>
+                                This action cannot be undone.{" "}
+                                {deleteTarget ? (
+                                    <>
+                                        You’re about to delete item <code>{String(deleteTarget.id)}</code>.
+                                    </>
+                                ) : (
+                                    "You’re about to delete this item."
+                                )}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {/* Optional place to surface errors from delete */}
+                        {deleteMsg && <FormError message={deleteMsg} />}
+
+                        <FormActions align="right">
+                            <Button
+                                type="button"
+                                color="bg"
+                                onClick={() => setDeleteOpen(false)}
+                                disabled={deleteBusy}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                color="var(--danger)"
+                                onClick={confirmDelete}
+                                loading={deleteBusy}
+                                autoFocus
+                            >
+                                Delete
+                            </Button>
+                        </FormActions>
                     </DialogContent>
                 </Dialog>
             )}

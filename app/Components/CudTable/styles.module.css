@@ -67,3 +67,14 @@
     display: grid;
     gap: 12px;
 }
+
+.deleteTitle {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.deleteIcon {
+    width: fit-content;
+    height: fit-content;
+}

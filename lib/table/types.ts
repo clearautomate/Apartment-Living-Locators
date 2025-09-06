@@ -18,6 +18,7 @@ export type ColumnDef<T> = {
     editableBy?: Role[];
     visibleTo?: Role[];
     required?: boolean;
+    placeholder?: string;
     format?: (value: unknown, row: T) => string;
 };
 

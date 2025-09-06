@@ -5,7 +5,8 @@ import { Button } from "../UI/Button/Button";
 export default function LogoutButton() {
     return (
         <Button
-            color="bg"
+            size="md"
+            color="bgLight"
             onClick={async () => {
                 try {
                     const res = await fetch("/api/user/logout", { method: "POST" });

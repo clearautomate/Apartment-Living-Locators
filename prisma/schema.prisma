@@ -4,8 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgres"
-  url      = env("DATABASE_URL")
+  provider  = "postgres"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -20,8 +21,10 @@ model User {
   isDeleted   Boolean     @default(false)
   createdAt   DateTime    @default(now())
 
-  leases Lease[]
-  draws  Draw[]
+  leases          Lease[]
+  draws           Draw[]
+  Payment         Payment[]
+  monthlyCounters MonthlyCounter[]
 }
 
 enum Permissions {
@@ -40,13 +43,14 @@ model Lease {
   apartmentNumber   String
   rentAmount        Float
   commissionType    CommissionType
-  commissionPrecent Float?
+  commissionPercent Float?
   commission        Float
   extraNotes        String?
 
   paidStatus     PaidStatus @default(unpaid)
   totalPaid      Float?
   paidDifference Float?
+  hasAdvance     Boolean    @default(true)
   Payment        Payment[]
 
   createdAt DateTime @default(now())
@@ -68,23 +72,47 @@ enum PaidStatus {
 }
 
 model Payment {
-  id      String @id @default(uuid())
-  leaseId String
-  lease   Lease  @relation(fields: [leaseId], references: [id])
+  id String @id @default(uuid())
 
-  amount Float
-  date   DateTime @default(now())
-  notes  String?
+  leaseId String
+  lease   Lease  @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  paymentType PaymentType
+  amount      Float
+  date        DateTime
+  notes       String?
 
   createdAt DateTime @default(now())
+}
+
+enum PaymentType {
+  advance
+  full
+  partial
+  chargeback
 }
 
 model Draw {
   id        String   @id @default(uuid())
   date      DateTime
   amount    Float
+  notes     String?
   createdAt DateTime @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
+}
+
+model MonthlyCounter {
+  userId String
+  month  Int
+  year   Int
+  value  Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, month, year])
 }

@@ -17,7 +17,7 @@ export function StatGrid({
             style={{
                 display: "grid",
                 gridTemplateColumns: `repeat(${desktopGridColumns}, 1fr)`,
-                gap: "2rem"
+                gap: "1rem"
             }}
         >
             {children}

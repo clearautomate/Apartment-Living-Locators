@@ -1,0 +1,68 @@
+/* summary.module.css */
+.summary {
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.downloadBtn {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.list {
+    display: grid;
+    gap: .25rem;
+    margin: 0;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: .5rem .25rem;
+}
+
+.label {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.row:not(.totalRow)>.label {
+    color: var(--text-muted);
+}
+
+.value {
+    text-align: right;
+}
+
+.value.success {
+    color: var(--success);
+}
+
+.value.danger {
+    color: var(--danger);
+}
+
+/* final total emphasis */
+.totalRow {}
+
+.totalLabel {
+    font-weight: bold;
+}
+
+.totalValue {
+    font-weight: bold;
+}
+
+.row:not(.totalRow) {
+    border-bottom: 1px solid var(--border);
+}

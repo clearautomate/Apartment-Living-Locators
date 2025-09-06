@@ -10,6 +10,9 @@ export async function listRows({ id }: Props): Promise<PaymentRow[]> {
         where: {
             leaseId: id
         },
+        orderBy: {
+            date: 'desc'
+        }
     });
 
     // Serialize dates to strings to match LogRow shape

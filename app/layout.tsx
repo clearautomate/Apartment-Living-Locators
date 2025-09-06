@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "./Components/UI/Toast/Toast";
+import AutoProgress from "./Providers/AutoProgress/AutoProgress";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -22,9 +23,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${poppins.variable}`}>
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+        <AutoProgress>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </AutoProgress>
       </body>
     </html>
   );

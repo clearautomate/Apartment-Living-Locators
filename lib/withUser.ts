@@ -21,7 +21,10 @@ export async function withUser(): Promise<SafeUser> {
     }
 
     const user = await prisma.user.findUnique({
-        where: { id: decoded.id },
+        where: {
+            id: decoded.id,
+            isDeleted: false,
+        },
         select: {
             id: true, fname: true, lname: true, email: true,
             username: true, permissions: true, createdAt: true, phone: true

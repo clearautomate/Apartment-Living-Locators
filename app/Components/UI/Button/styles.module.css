@@ -1,9 +1,11 @@
 .base {
+    position: relative;
+    /* enable absolute spinner overlay */
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 0.5rem;
+    border-radius: var(--corners);
     font-weight: 600;
     transition: background-color .2s, border-color .2s, color .2s, opacity .2s, filter .2s;
     padding: 0.375rem 0.75rem;
@@ -13,7 +15,7 @@
 
 .base:hover {
     cursor: pointer;
-    background-color: color-mix(in hsl, var(--btn-bg) 80%, black);
+    background-color: color-mix(in oklch, var(--btn-bg, var(--primary)) 85%, black);
 }
 
 .fullWidth {
@@ -42,36 +44,41 @@
 }
 
 .variant_outline {
-    background: #fff;
-    color: var(--btn-bg, #111);
-    border-color: var(--btn-bg, #ddd);
+    background: var(--bg-light);
+    color: var(--btn-bg, var(--text));
+    border-color: var(--btn-bg, var(--border));
 }
 
-.variant_destructive {
-    background: var(--danger);
-    color: var(--bg-light);
+.variant_outline:hover {
+    background-color: color-mix(in oklch, white 85%, var(--btn-bg, var(--text)));
+    color: var(--btn-bg, var(--text));
+    border-color: var(--btn-bg, var(--text));
 }
 
-/* Colors (set variables used by variants) */
+/* Colors */
 .color_primary {
     --btn-bg: var(--primary);
     --btn-fg: var(--bg-light);
 }
 
 .color_bg {
+    --btn-bg: var(--border);
+    --btn-fg: var(--text-muted);
+}
+
+.color_bg_light {
     --btn-bg: var(--bg-light);
     --btn-fg: var(--text);
 }
 
 .color_text {
-    --btn-bg: #111827;
-    --btn-fg: #ffffff;
+    --btn-bg: var(--text);
+    --btn-fg: var(--bg-light);
 }
 
-/* Custom color provided via inline style: --btn-color */
 .color_custom {
-    --btn-bg: var(--btn-color, #6b7280);
-    --btn-fg: #ffffff;
+    --btn-bg: var(--btn-color, var(--border));
+    --btn-fg: var(--bg-light);
 }
 
 /* Loading */
@@ -80,9 +87,15 @@
     opacity: 0.9;
 }
 
-.spinner {
-    width: 1em;
-    height: 1em;
+/* spinner overlay — centered, doesn’t shift layout */
+.spinnerOverlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.2em;
+    height: 1.2em;
+    margin-top: -0.6em;
+    margin-left: -0.6em;
     border: 0.2em solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
@@ -95,7 +108,7 @@
     }
 }
 
-/* Content & icon layout */
+/* Layout */
 .content {
     display: inline-flex;
     align-items: center;
@@ -114,6 +127,24 @@
     flex-direction: row-reverse;
 }
 
-.label {
+/* label + icon hidden during loading but still reserve width */
+.label,
+.icon {
     display: inline-flex;
+}
+
+.hiddenContent {
+    visibility: hidden;
+    /* hides visually but keeps space */
+}
+
+/* fallback */
+@supports not (color: color-mix(in oklch, white 90%, black)) {
+    .base:hover {
+        filter: brightness(.92);
+    }
+}
+
+.base:disabled {
+    cursor: not-allowed;
 }

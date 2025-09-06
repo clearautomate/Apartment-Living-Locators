@@ -1,0 +1,29 @@
+/* components/Chip.module.css */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 4px 10px;
+    gap: 0.4em;
+    --chip-hue: 220;
+}
+
+.solid {
+    background-color: hsl(var(--chip-hue), 70%, 90%);
+    color: hsl(var(--chip-hue), 70%, 30%);
+    border: none;
+}
+
+.outline {
+    background-color: transparent;
+    border: 1px solid hsl(var(--chip-hue), 70%, 80%);
+    color: hsl(var(--chip-hue), 70%, 30%);
+}
+
+.text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

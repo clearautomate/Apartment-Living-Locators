@@ -1,27 +1,20 @@
 // app/agent/[id]/leases/page.tsx
 import { withUser } from "@/lib/withUser";
 import {
-    onCreate as onCreateLog,
-    onUpdate as onUpdateLog,
-    onDelete as onDeleteLog,
-} from "@/app/(actions)/logActions";
-import {
     onCreate as onCreateDraw,
     onUpdate as onUpdateDraw,
     onDelete as onDeleteDraw,
 } from "@/app/(actions)/drawActions";
 import { listRows as listLogRows } from "@/lib/queries/logQueries";
-import { listOverdue as listAdjustmentRows } from "@/lib/queries/collectionQueries";
 import { listRows as listDrawRows } from "@/lib/queries/drawQueries";
 import { redirect } from "next/navigation";
 import AgentReport from "@/app/Components/AgentReport/AgentReport";
-import LogsClient from "./LogsClient";
 import DrawsClient from "./DrawsClient";
-import AdjustmentsClient from "./AdjustmentsClient";
 import DownloadReportButton from "@/app/Components/DownloadReportButton/DownloadReportButton";
 import styles from "./styles.module.css";
 import { getMonthAndYear } from "@/lib/getMonthAndYear";
 import { prisma } from "@/lib/prisma";
+import MonthlyPaymentBreakdown from "@/app/Components/MonthlyPaymentBreakdown/MonthlyPaymentBreakdown";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -45,22 +38,17 @@ export default async function Page(props: Props) {
     if (user.permissions === "agent" && user.id !== id) throw new Error("Forbidden");
 
     const agent = await prisma.user.findUnique({
-        where: { id },
+        where: {
+            id,
+            isDeleted: false,
+        },
         select: { fname: true, lname: true },
     });
 
     const isOwner = user.permissions === "owner";
 
     const logRows = await listLogRows({ userId: id, searchParams: sp });
-    const adjustmentRows = await listAdjustmentRows({ userId: id });
     const drawRows = await listDrawRows({ userId: id, searchParams: sp });
-
-    // ✅ Bind server actions (separate per type)
-    const logActions = {
-        onCreate: onCreateLog.bind(null, id),
-        onUpdate: onUpdateLog.bind(null, id),
-        onDelete: onDeleteLog.bind(null, id),
-    };
 
     const drawActions = {
         onCreate: isOwner ? onCreateDraw.bind(null, id) : undefined,
@@ -89,7 +77,7 @@ export default async function Page(props: Props) {
 
     return (
         <>
-            <div className={`page-width ${styles.downloadBtn}`}>
+            {/* <div className={`page-width ${styles.downloadBtn}`}>
                 <DownloadReportButton
                     data={{
                         agent: agentName,
@@ -100,9 +88,9 @@ export default async function Page(props: Props) {
                         splitAmount,
                     }}
                 />
-            </div>
+            </div> */}
 
-            <div className="page-width section">
+            {/* <div className="page-width section">
                 <AgentReport
                     agent={agentName}
                     period={`${month} ${year}`}
@@ -114,14 +102,10 @@ export default async function Page(props: Props) {
                         splitAmount,
                     }}
                 />
-            </div>
+            </div> */}
 
-            <div className="page-width section">
-                <LogsClient role={user.permissions} rows={logRows} actions={logActions} />
-            </div>
-
-            <div className="page-width section">
-                <AdjustmentsClient role={user.permissions} rows={adjustmentRows} actions={logActions} />
+            <div className="page-width">
+                <MonthlyPaymentBreakdown id={id} sp={sp} agent={agentName} totalDraws={totalDraws} drawRows={drawRows} />
             </div>
 
             <div className="page-width section">

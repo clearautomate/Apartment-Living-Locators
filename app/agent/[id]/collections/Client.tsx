@@ -5,52 +5,41 @@ import { useMemo } from "react";
 import { CudTable } from "@/app/Components/CudTable/CudTable";
 import type { Role } from "@/lib/table/types";
 import { logTableConfig, type LogRow } from "@/lib/table/configs/log";
-import type { ActionResult } from "@/app/Components/CudTable/CudTable";
 import Tabs from "@/app/Components/UI/Tabs/Tabs";
 
-type Actions = {
-    onCreate?: (form: FormData) => Promise<ActionResult>;
-    onUpdate?: (id: string, form: FormData) => Promise<ActionResult>;
-    onDelete?: (id: string) => Promise<ActionResult>;
-};
-
 type RowsByBucket = {
-    overdueRows: LogRow[];
-    upcomingRows: LogRow[];
-    pastRows: LogRow[];
+    pendingRows: LogRow[];
+    historyRows: LogRow[];
 };
 
 interface ClientProps {
     role: Role;
     rows: RowsByBucket;
-    actions: Actions;
 }
 
-export default function Client({ role, rows, actions }: ClientProps) {
+export default function Client({ role, rows }: ClientProps) {
     const sections: Array<{ label: string; key: keyof RowsByBucket }> = [
-        { label: "Overdue", key: "overdueRows" },
-        { label: "Upcoming", key: "upcomingRows" },
-        { label: "Past", key: "pastRows" },
+        { label: "Pending", key: "pendingRows" },
+        { label: "History", key: "historyRows" },
     ];
 
     const baseTableProps = useMemo(
         () => ({
             config: logTableConfig,
             role,
-            actions,
             tableName: "Lease" as const,
             allowCreate: true,
         }),
-        [role, actions]
+        [role]
     );
 
     const tabs = useMemo(
         () =>
             sections.map(({ label, key }) => ({
                 label,
-                content: <CudTable {...baseTableProps} rows={rows[key]} />,
+                content: <CudTable {...baseTableProps} rows={rows[key]} link={'/lease'}/>,
             })),
-        [sections, baseTableProps, rows.overdueRows, rows.upcomingRows, rows.pastRows]
+        [sections, baseTableProps, rows.pendingRows, rows.historyRows]
     );
 
     return <Tabs tabs={tabs} />;

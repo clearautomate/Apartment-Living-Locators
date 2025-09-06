@@ -10,6 +10,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             <input
                 ref={ref}
                 className={`${styles.input} ${className}`}
+                onWheel={(e) => (e.currentTarget as HTMLElement).blur()} // prevent scroll change
                 {...props}
             />
         );

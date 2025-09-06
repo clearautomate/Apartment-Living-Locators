@@ -18,7 +18,11 @@ export async function listUsers() {
                 password: true,
                 permissions: true,
                 // createdAt: true
-            }
+            },
+            orderBy: [
+                { permissions: "asc" }, // or "desc"
+                { fname: "desc" },  // or "asc"
+            ],
         }
     )
 

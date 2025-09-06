@@ -7,7 +7,7 @@
     appearance: none;
     background-color: var(--bg-lighter);
     border: 1px solid var(--border);
-    border-radius: 0.5rem;
+    border-radius: var(--corners);
     padding: 0.5rem 2rem 0.5rem 0.75rem;
     font-size: 0.875rem;
     cursor: pointer;

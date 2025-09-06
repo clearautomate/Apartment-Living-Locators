@@ -39,5 +39,5 @@
 
 .active {
     background-color: var(--bg);
-    color: var(--text);
+    color: var(--text) !important;
 }

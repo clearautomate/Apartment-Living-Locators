@@ -1,15 +1,13 @@
+// app/(wherever)/Users.tsx
 "use client";
 
 import styles from "./styles.module.css";
 import { Dropdown } from "../UI/Dropdown/Dropdown";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { progressRef } from "@/app/Providers/AutoProgress/progressRef";
 
 interface Props {
-    users: {
-        id: string;
-        fname: string;
-        lname: string;
-    }[];
+    users: { id: string; fname: string; lname: string }[];
     permissions: string;
 }
 
@@ -18,14 +16,12 @@ export default function Users({ users, permissions }: Props) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // Keep current search params as string
+    if (permissions !== "owner") return null;
+
     const queryString = searchParams.toString();
     const suffix = queryString ? `?${queryString}` : "";
-
     const currentUserId = (params?.id as string | undefined) ?? "";
     const value = currentUserId;
-
-    if (permissions !== "owner") return null;
 
     return (
         <div className={styles.fields}>
@@ -46,6 +42,9 @@ export default function Users({ users, permissions }: Props) {
                         typeof e === "string"
                             ? e
                             : (e.target as HTMLSelectElement).value;
+
+                    // ✅ kick the progress bar immediately
+                    progressRef.start?.();
 
                     if (next) {
                         router.push(`/agent/${next}/overview${suffix}`);

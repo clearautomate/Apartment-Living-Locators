@@ -20,13 +20,13 @@
   --warning: hsl(35, 100%, 50%);
   --danger: hsl(0, 80%, 50%);
 
-  --card: 0 4px 8px 0 rgba(0, 0, 0, 0.15);
+  --card: 0 4px 12px 0 rgba(0, 0, 0, 0.10);
 
   --transition-s: 100ms ease-in-out;
   --transition-m: 300ms ease-in-out;
   --transition-l: 600ms ease-in-out;
 
-  --corners: 8px;
+  --corners: 6px;
 
   /* Report styles */
   --color-bg: #fafafa;
@@ -126,6 +126,7 @@ body {
   background: var(--bg-lighter);
   border: 1px solid var(--border);
   border-radius: var(--corners);
+  /* box-shadow: var(--card); */
 }
 
 .card h2 {

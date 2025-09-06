@@ -13,6 +13,7 @@ type PaymentField = keyof Payment;
 export const paymentFieldPolicy = {
     id: { read: ["owner", "agent"], write: [] },
     leaseId: { read: ["owner", "agent"], write: [] },
+    paymentType: { read: ["owner", "agent"], write: ["owner"] },
     amount: { read: ["owner", "agent"], write: ["owner"] },
     date: { read: ["owner", "agent"], write: ["owner"] },
     notes: { read: ["owner", "agent"], write: ["owner"] },

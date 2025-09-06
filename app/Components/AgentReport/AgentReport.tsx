@@ -4,7 +4,7 @@ type Totals = {
     totalBillOut: number;           // info only; not a payout
     splitAmount: number;            // CREDIT – pass this in already computed
     totalAdjustments?: number;      // positive dollars; treated as DEBIT
-    totalDraws?: number;            // positive dollars; treated as DEBIT
+    totalDraws?: number;            // can be + (debit) or - (credit)
     notes?: {
         billOut?: string;
         split?: string;
@@ -41,13 +41,13 @@ export default function AgentReport({
     } = totals;
 
     // ---- convert to cents ----
-    const billOutC = toCents(totalBillOut);                  // INFO ONLY
-    const splitC = toCents(splitAmount);                     // CREDIT
-    const adjustmentsC = -toCents(Math.abs(totalAdjustments)); // DEBIT
-    const drawsC = -toCents(Math.abs(totalDraws));             // DEBIT
+    const billOutC = toCents(totalBillOut);                        // INFO ONLY
+    const splitC = toCents(splitAmount);                           // CREDIT
+    const adjustmentsC = -toCents(Math.abs(totalAdjustments));     // always a DEBIT
+    const drawsC = -toCents(totalDraws);                           // +input => debit, -input => credit
 
-    const creditTotalC = splitC;
-    const debitTotalC = adjustmentsC + drawsC; // <= 0
+    const creditTotalC = splitC + (drawsC > 0 ? drawsC : 0);
+    const debitTotalC = adjustmentsC + (drawsC < 0 ? drawsC : 0);  // <= 0
     const netC = creditTotalC + debitTotalC;
 
     let runningC = 0;
@@ -64,7 +64,7 @@ export default function AgentReport({
         amountCents: number;
         note?: string;
         affectsBalance?: boolean;
-        forceNegativeStyle?: boolean;
+        forceNegativeStyle?: boolean; // kept for compatibility; usually not needed
         typeOverride?: string;
     }) => {
         if (affectsBalance) runningC += amountCents;
@@ -140,6 +140,13 @@ export default function AgentReport({
                         amountCents={splitC}
                         note={notes?.split}
                     />
+                    {drawsC > 0 && (
+                        <Row
+                            label="Draws"
+                            amountCents={drawsC}
+                            note={notes?.draws}
+                        />
+                    )}
                     <tr className={styles.subtotal}>
                         <td colSpan={showRunningBalance ? 2 : 2}>Subtotal credits</td>
                         <td className={`${styles.right} ${styles.pos}`} colSpan={showRunningBalance ? 2 : 1}>
@@ -152,13 +159,18 @@ export default function AgentReport({
                     <tr className={styles.group}>
                         <td colSpan={showRunningBalance ? 4 : 3}>Debits</td>
                     </tr>
-                    <Row label="Adjustments" amountCents={adjustmentsC} note={notes?.adjustments} />
                     <Row
-                        label="Draws"
-                        amountCents={drawsC}
-                        note={notes?.draws}
-                        forceNegativeStyle
+                        label="Adjustments"
+                        amountCents={adjustmentsC}
+                        note={notes?.adjustments}
                     />
+                    {drawsC < 0 && (
+                        <Row
+                            label="Draws"
+                            amountCents={drawsC}
+                            note={notes?.draws}
+                        />
+                    )}
                     <tr className={styles.subtotal}>
                         <td colSpan={showRunningBalance ? 2 : 2}>Subtotal debits</td>
                         <td className={`${styles.right} ${styles.neg}`} colSpan={showRunningBalance ? 2 : 1}>

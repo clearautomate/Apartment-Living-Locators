@@ -38,7 +38,7 @@ async function main() {
                     CommissionType.percent,
                     CommissionType.flat,
                 ]),
-                commissionPrecent: faker.number.float({ min: 0, max: 100, fractionDigits: 2 }),
+                commissionPercent: faker.number.float({ min: 0, max: 100, fractionDigits: 2 }),
                 commission: faker.number.float({ min: 50, max: 500, fractionDigits: 2 }),
                 createdAt: date,
                 // userId: user.id,

@@ -13,7 +13,7 @@ type LogField = keyof Log;
 export const logFieldPolicy = {
     id: { read: ["owner", "agent"], write: [] },
     moveInDate: { read: ["owner", "agent"], write: ["owner", "agent"] },
-    invoiceNumber: { read: ["owner", "agent"], write: ["owner", "agent"] },
+    invoiceNumber: { read: ["owner", "agent"], write: [] },
     complex: { read: ["owner", "agent"], write: ["owner", "agent"] },
     tenantFname: { read: ["owner", "agent"], write: ["owner", "agent"] },
     tenantLname: { read: ["owner", "agent"], write: ["owner", "agent"] },
@@ -21,7 +21,7 @@ export const logFieldPolicy = {
     apartmentNumber: { read: ["owner", "agent"], write: ["owner", "agent"] },
     rentAmount: { read: ["owner", "agent"], write: ["owner", "agent"] },
     commissionType: { read: ["owner", "agent"], write: ["owner", "agent"] },
-    commissionPrecent: { read: ["owner", "agent"], write: ["owner", "agent"] },
+    commissionPercent: { read: ["owner", "agent"], write: ["owner", "agent"] },
     commission: { read: ["owner", "agent"], write: ["owner", "agent"] },
     extraNotes: { read: ["owner", "agent"], write: ["owner", "agent"] },
     paidStatus: { read: ["owner", "agent"], write: ["owner"] },

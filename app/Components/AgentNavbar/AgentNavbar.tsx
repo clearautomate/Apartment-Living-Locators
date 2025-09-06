@@ -3,15 +3,12 @@
 import styles from "./styles.module.css";
 import { Dropdown } from "../UI/Dropdown/Dropdown";
 import { Button } from "../UI/Button/Button";
-const Links = dynamic(() => import("./Links"), {
-    ssr: false,
-    loading: () => <div style={{ height: 200 }} />,
-});
+const Links = dynamic(() => import("./Links"), { ssr: true });
 import { HiOutlineFilter } from "react-icons/hi";
 import Users from "./Users";
-import { User } from "@/app/generated/prisma";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 
 function monthYearOptions(startYear = 2025) {
     const now = new Date();
@@ -55,17 +52,39 @@ export default function AgentNavbar({ permissions, paramId, users }: Props) {
     const now = new Date();
 
     const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const router = useRouter();
 
     const defaultMonth =
         searchParams.get("month") || String(now.getUTCMonth() + 1).padStart(2, "0");
     const defaultYear = searchParams.get("year") || String(now.getUTCFullYear());
+
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        setLoading(false); // stop loading whenever URL actually changes
+    }, [searchParams, pathname]);
+
+    function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+
+        const formData = new FormData(e.currentTarget);
+        const month = formData.get("month") as string;
+        const year = formData.get("year") as string;
+
+        // only trigger navigation if params are different
+        if (month !== defaultMonth || year !== defaultYear) {
+            setLoading(true);
+            router.push(`${pathname}?month=${month}&year=${year}`);
+        }
+    }
 
     return (
         <>
             <div className="page-width">
                 <div className={styles.filters}>
                     <Users users={users} permissions={permissions} />
-                    <form method="GET" className={styles.fields}>
+                    <form onSubmit={handleSubmit} className={styles.fields}>
                         <label htmlFor="month">Month:</label>
                         <Dropdown
                             id="month"
@@ -90,6 +109,7 @@ export default function AgentNavbar({ permissions, paramId, users }: Props) {
                             type="submit"
                             size="lg"
                             icon={<HiOutlineFilter size={20} />}
+                            loading={loading}
                         >
                             Apply
                         </Button>

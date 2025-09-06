@@ -47,8 +47,8 @@ export function DialogHeader({ children }: { children: React.ReactNode }) {
     return <div className={styles.header}>{children}</div>;
 }
 
-export function DialogTitle({ children }: { children: React.ReactNode }) {
-    return <h3 className={styles.title}>{children}</h3>;
+export function DialogTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+    return <h3 className={`${styles.title} ${className ?? ""}`}>{children}</h3>;
 }
 
 export function DialogDescription({ children }: { children: React.ReactNode }) {
