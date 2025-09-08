@@ -71,7 +71,7 @@ export const paymentColumns: ColumnDef<PaymentRow>[] = [
         key: "notes",
         label: "Notes",
         input: "text",
-        editableBy: ["owner", "agent"],
+        editableBy: ["owner"],
         placeholder: "Enter notes",
     },
 ];

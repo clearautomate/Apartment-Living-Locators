@@ -248,11 +248,11 @@ export default async function LeasePage({ params }: PageProps) {
                     <Client
                         rows={rows}
                         role={user.permissions}
-                        actions={{
+                        actions={user.permissions === 'owner' ? {
                             onCreate: onCreateBound,
                             onUpdate: onUpdateBound,
                             onDelete: onDeleteBound,
-                        }}
+                        } : {}}
                     />
                 </div>
             </div>

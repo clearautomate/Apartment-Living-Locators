@@ -18,7 +18,7 @@ export default function Client({
 }: {
     role: Role;
     rows: PaymentRow[];
-    actions: Actions;
+    actions: Actions | {};
 }) {
     return (
         <CudTable
