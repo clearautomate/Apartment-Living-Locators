@@ -27,7 +27,7 @@ export default function Client({
             role={role}
             rows={rows}
             actions={actions}
-            tableName="Lease"
+            tableName="Leases"
             allowCreate
             link="/lease"
         />

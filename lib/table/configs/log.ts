@@ -69,8 +69,8 @@ export type LogRow = z.infer<typeof LogSchema>;
 export const logColumns: ColumnDef<LogRow>[] = [
     { key: "invoiceNumber", label: "Invoice #", input: "text", editableBy: [], required: true, placeholder: "Enter invoice number" },
     { key: "complex", label: "Complex", input: "text", editableBy: ["owner", "agent"], required: true, placeholder: "Enter complex name" },
-    { key: "tenantFname", label: "First", input: "text", editableBy: ["owner", "agent"], required: true, placeholder: "Enter first name" },
-    { key: "tenantLname", label: "Last", input: "text", editableBy: ["owner", "agent"], required: true, placeholder: "Enter last name" },
+    { key: "tenantFname", label: "First", input: "text", editableBy: ["owner", "agent"], required: true, placeholder: "Enter tenant's first name" },
+    { key: "tenantLname", label: "Last", input: "text", editableBy: ["owner", "agent"], required: true, placeholder: "Enter tenant's last name" },
     { key: "tenantEmail", label: "Email", input: "text", editableBy: ["owner", "agent"], placeholder: "Enter email address" },
 
     {
