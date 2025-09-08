@@ -9,12 +9,12 @@ export type LeasePaymentLike = {
  * Totals for a single lease.
  *
  * Definitions:
- * - totalBillOut: (formerly netPaid) net cash picture after advance repayment logic + chargebacks.
+ * - totalBillOut: net cash picture after (only FULL) advance repayment logic + chargebacks.
  * - chargebacks: sum of clawbacks (≤ 0).
  * - remainingBalance: commission - sum(full + partial only).
  *
  * Rules:
- * - Full/partial first repay any (explicit or implicit) advance.
+ * - **NEW**: Partials do NOT repay advances; only FULL payments repay any (explicit or implicit) advance.
  * - Advances don't count toward bill-out or balance.
  * - Remaining advance can offset chargebacks in totalBillOut.
  * - Implicit advance = commission when leaseHasAdvance is true and there are no advance rows.
@@ -49,24 +49,34 @@ export function computeLeasePaymentTotals(
     const hasNonAdvancePositive = positivesNonAdvance > 0;
     const hasChargeback = chargebacks < 0;
 
-    // Repayment: full/partial are first used to repay outstanding advance
-    const implicitRepay = Math.min(positivesNonAdvance, implicitAdvance);
-    const repaidPortion = Math.max(0, positivesNonAdvance - implicitRepay);
+    /**
+     * Repayment policy:
+     * - ONLY FULL payments repay advance.
+     * - Partials pass straight through to bill-out (i.e., never reduced by advance).
+     */
+    const repayablePortion = fulls; // only fulls can be used to repay advance
+    const implicitRepay = Math.min(repayablePortion, implicitAdvance);
     const remainingAdvance = Math.max(0, implicitAdvance - implicitRepay);
 
-    // TOTAL BILL-OUT (was netPaid)
+    // The part that survives after repayment:
+    // - All partials (untouched)
+    // - Fulls minus whatever was used to repay
+    const survivingFulls = Math.max(0, fulls - implicitRepay);
+    const repaidPortion = partials + survivingFulls; // survives to bill-out
+
+    // TOTAL BILL-OUT
     let totalBillOut = 0;
     if (hasNonAdvancePositive) {
+        // Surviving positives count, and remaining advance can offset chargebacks
         totalBillOut = repaidPortion + (hasChargeback ? remainingAdvance : 0);
     } else if (implicitAdvance > 0) {
+        // No positives — show remaining advance (offsets chargebacks below)
         totalBillOut = remainingAdvance;
     }
     totalBillOut += chargebacks;
 
     // REMAINING BALANCE: commission - (full + partial only)
-    const nonAdvanceTransactions = payments
-        .filter((p) => p.paymentType === "full" || p.paymentType === "partial")
-        .reduce((acc, p) => acc + toNum(p.amount), 0);
+    const nonAdvanceTransactions = positivesNonAdvance; // full + partial only
     const remainingBalance = commission - nonAdvanceTransactions;
 
     return {
