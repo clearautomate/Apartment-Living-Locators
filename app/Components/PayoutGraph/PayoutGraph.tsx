@@ -71,7 +71,7 @@ async function getDailySeriesForMonth(userId: string, sp?: SP) {
 
         const amt = p.amount ?? 0;
 
-        if (p.paymentType === PaymentType.full || p.paymentType === PaymentType.partial) {
+        if (p.paymentType === PaymentType.payment) {
             bins[dayIndex].paid += amt;
         } else if (p.paymentType === PaymentType.chargeback) {
             bins[dayIndex].chargebacks += Math.abs(amt); // display as positive
