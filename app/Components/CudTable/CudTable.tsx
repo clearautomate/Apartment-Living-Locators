@@ -12,7 +12,7 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/app/Components/UI/Dialog/Dialog";
-import { Field, Form, FormActions, FormError } from "../UI/Form/Form";
+import { Field, Form, FormActions, FormError, Select } from "../UI/Form/Form";
 import { Input } from "../UI/Input/Input";
 import { Dropdown } from "../UI/Dropdown/Dropdown";
 import {
@@ -22,6 +22,7 @@ import {
     HiOutlineExclamationTriangle,
 } from "react-icons/hi2";
 import Link from "../UI/Link/Link";
+import { FieldShell, type FieldAddonRenderCtx } from "../UI/Form/FieldShell";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -134,6 +135,15 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(s) && !/[zZ]$/.test(s);
     }
 
+    // ---------- Money helpers ----------
+    function moneyColor(value: unknown): string | undefined {
+        const n = typeof value === "number" ? value : Number(value);
+        if (!Number.isFinite(n)) return undefined;
+        if (n < 0) return "var(--danger)"; // red
+        if (n > 0) return "var(--success)"; // green
+        return undefined; // zero → no color change
+    }
+
     function renderCell(row: TRow, key: keyof TRow & string, isFirst: boolean) {
         const col = config.columns.find((c) => c.key === key)!;
         const raw = (row as any)[key];
@@ -145,6 +155,16 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
             content = opt ? opt.label : (raw ?? "");
         } else {
             content = raw == null ? "" : String(raw);
+        }
+
+        if (col.input === "money") {
+            // Colorize money display
+            const color = moneyColor(raw);
+            content = (
+                <span style={color ? { color } : undefined}>
+                    {content}
+                </span>
+            );
         }
 
         // Wrap first column with link if link prop exists
@@ -167,54 +187,104 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
         const placeholder = col.placeholder;
         const value = (current as any)[colKey];
 
-        if (col.input === "number") {
-            return (
+        // Build the base control (uncontrolled as you already use)
+        const Control: React.FC<{ inputType?: string; step?: string; inputMode?: any; defaultValue?: any }> = ({
+            inputType = "text", step, inputMode, defaultValue
+        }) => {
+            // If you want programmatic set from addons, forward a ref and expose setInputValue
+            const inputRef = React.useRef<HTMLInputElement | null>(null);
+            const ctx: FieldAddonRenderCtx = {
+                name,
+                row: current,
+                value: defaultValue,
+                disabled,
+                required,
+                setInputValue: col.addons?.exposeInputRef ? ((v) => {
+                    if (inputRef.current) {
+                        inputRef.current.value = v;
+                        inputRef.current.dispatchEvent(new Event("input", { bubbles: true }));
+                    }
+                }) : undefined
+            };
+
+            // Attach ctx to addon container so AddonButton can get it
+            const attachCtx = (node: HTMLElement | null) => {
+                if (node) (node as any).__ctx = ctx;
+            };
+
+            const base = (
                 <Input
-                    type="number"
+                    ref={col.addons?.exposeInputRef ? inputRef : undefined}
+                    type={inputType}
                     name={name}
                     required={required}
                     disabled={disabled}
-                    defaultValue={value ?? ""}
-                    step="0.01"
+                    defaultValue={defaultValue ?? ""}
+                    step={step}
+                    inputMode={inputMode}
                     placeholder={placeholder}
+                    className="input"
                 />
             );
+
+            return (
+                <FieldShell
+                    {...ctx}
+                    className="fieldShell"
+                    startAddon={col.addons?.startAddon}
+                    endAddon={col.addons?.endAddon}
+                    wrap={col.addons?.wrap}
+                >
+                    {/* attach ctx for any nested DOM node that needs it */}
+                    <div ref={attachCtx as any}>{base}</div>
+                </FieldShell>
+            );
+        };
+
+        // Map your inputs
+        if (col.input === "number") {
+            return <Control inputType="number" step="0.01" defaultValue={value} />;
+        }
+        if (col.input === "money") {
+            return <Control inputType="number" step="0.01" inputMode="decimal" defaultValue={value} />;
         }
         if (col.input === "date") {
-            return (
-                <Input
-                    type="date"
-                    name={name}
-                    required={required}
-                    disabled={disabled}
-                    defaultValue={toDateInputValue(value)}
-                />
-            );
+            return <Control inputType="date" defaultValue={toDateInputValue(value)} />;
         }
         if (col.input === "select" && col.options) {
-            return (
-                <Dropdown
-                    name={name}
-                    required={required}
-                    disabled={disabled}
-                    defaultValue={value ?? ""}
-                    options={[
-                        { value: "", label: "Select…" },
-                        ...col.options.map((o) => ({ value: String(o.value), label: o.label })),
-                    ]}
-                />
-            );
+            // Select can use the same FieldShell too — just render the <select> as children
+            const SelectWithAddons: React.FC = () => {
+                const ctx: FieldAddonRenderCtx = { name, row: current, value, disabled, required };
+                return (
+                    <FieldShell
+                        {...ctx}
+                        className="fieldShell"
+                        startAddon={col.addons?.startAddon}
+                        endAddon={col.addons?.endAddon}
+                        wrap={col.addons?.wrap}
+                    >
+                        <Select
+                            name={name}
+                            required={required}
+                            disabled={disabled}
+                            defaultValue={value ?? ""}
+                            className="select"
+                        >
+                            <option value="">Select…</option>
+                            {col.options?.map((o) => (
+                                <option key={String(o.value)} value={String(o.value)}>
+                                    {o.label}
+                                </option>
+                            ))}
+                        </Select>
+                    </FieldShell>
+                );
+            };
+            return <SelectWithAddons />;
         }
-        return (
-            <Input
-                type="text"
-                name={name}
-                required={required}
-                disabled={disabled}
-                defaultValue={value ?? ""}
-                placeholder={placeholder}
-            />
-        );
+
+        // default text
+        return <Control inputType="text" defaultValue={value} />;
     }
 
     async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -227,7 +297,7 @@ export function CudTable<TRow extends { id: string }>(props: Props<TRow>) {
             let val = typeof v === "string" ? v : String(v);
             if (val === "") continue;
             if (dateKeys.includes(k as any)) {
-                if (isDateOnly(val)) val = new Date(val + "T00:00:00Z").toISOString();
+                if (isDateOnly(val)) val = new Date(val + "T12:00:00Z").toISOString();
                 else if (isDatetimeLocal(val)) val = new Date(val).toISOString();
             }
             patched.append(k, val);

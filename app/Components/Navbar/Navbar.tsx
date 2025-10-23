@@ -52,7 +52,7 @@ export default function Navbar({ permissions, id }: Props) {
                                     href={`/agent/${id}/overview`}
                                     className={isActive("/agent") ? styles.active : ""}
                                 >
-                                    Me
+                                    Dashboard
                                 </Link>
                             </>
                         )}

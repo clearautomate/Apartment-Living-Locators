@@ -5,7 +5,6 @@ import Link from "../UI/Link/Link";
 import Chip from "../UI/Chip/Chip";
 import Summary from "../Summary/Summary";
 import DownloadReportButton from "../DownloadReportButton/DownloadReportButton";
-
 import { StatGrid } from "../UI/StatCard/StatCard";
 
 import { prisma } from "@/lib/prisma";
@@ -31,6 +30,9 @@ type Props = {
 
 // Derive the element type of the `payments` array we fetch below
 type PaymentWithLease = Awaited<ReturnType<typeof fetchPayments>>[number];
+
+/** Local widening (so we don't have to change shared PaymentRow type) */
+type PaymentRowWithPayout = PaymentRow & { payout?: number | null };
 
 /* ────────────────────────────────────────────────────────────────────────────
    DB
@@ -58,7 +60,6 @@ async function fetchPayments(userId: string, month: number, year: number) {
                     commissionType: true,
                     commissionPercent: true,
                     createdAt: true, // used for grouping sort
-                    hasAdvance: true, // <— read from lease
                 },
             },
         },
@@ -79,26 +80,41 @@ function renderPaymentValue<K extends keyof PaymentRow>(
     row: PaymentRow,
 ) {
     const col = getPaymentColumn(key);
-    if (!col) return (value as any) ?? "—";
+    if (!col) {
+        // Graceful fallback formatting for amount/payout even if column isn't defined in config
+        if (typeof value === "number" && (key as string) === "amount") return formatUSD(value);
+        if (typeof value === "number" && (key as string) === "payout") return formatUSD(value as any);
+        return (value as any) ?? "—";
+    }
     if (col.format) return col.format(value, row);
 
     if (col.input === "select" && col.options) {
         const opt = col.options.find((o) => o.value === value);
         return opt?.label ?? (value as any) ?? "—";
     }
+
+    // Generic fallback for money-ish fields
+    if (
+        typeof value === "number" &&
+        ((col.key as string) === "amount" || (col.key as string) === "payout")
+    ) {
+        return formatUSD(value);
+    }
+
     return (value as any) ?? "—";
 }
 
-// Prisma Payment → PaymentRow (string dates for z.iso.datetime())
+// Prisma Payment → PaymentRow (string dates for z.iso.datetime()) + local payout
 function toPaymentRow(p: {
     id: string;
     leaseId: string;
     paymentType: PaymentRow["paymentType"];
     amount: number;
+    payout?: number | null; // NEW
     date: Date | string;
     notes: string | null;
     createdAt?: Date | string | null;
-}): PaymentRow {
+}): PaymentRowWithPayout {
     const toIso = (d: Date | string | null | undefined) => {
         if (!d) return undefined;
         if (typeof d === "string") return d; // assume already ISO
@@ -110,6 +126,7 @@ function toPaymentRow(p: {
         leaseId: p.leaseId,
         paymentType: p.paymentType,
         amount: p.amount,
+        payout: p.payout ?? undefined, // NEW
         date: toIso(p.date)!,
         notes: p.notes,
         createdAt: toIso(p.createdAt),
@@ -117,13 +134,19 @@ function toPaymentRow(p: {
 }
 
 /** Use UI renderers to produce export-ready strings for a payment row */
-function toRenderedPaymentExportRow(row: PaymentRow) {
+function toRenderedPaymentExportRow(row: PaymentRowWithPayout) {
+    // Casts keep the existing PaymentRow-based renderers happy without changing shared types
+    const base = row as unknown as PaymentRow;
     return {
-        type: String(renderPaymentValue("paymentType", row.paymentType, row)),
-        date: String(renderPaymentValue("date", row.date, row)),
-        leaseId: row.leaseId,
-        amount: String(renderPaymentValue("amount", row.amount, row)),
-        note: row.notes ? String(renderPaymentValue("notes", row.notes, row)) : undefined,
+        type: String(renderPaymentValue("paymentType", base.paymentType, base)),
+        date: String(renderPaymentValue("date", base.date, base)),
+        leaseId: base.leaseId,
+        amount: String(renderPaymentValue("amount", base.amount, base)),
+        payout:
+            row.payout != null
+                ? String(renderPaymentValue("payout" as any, row.payout as any, base))
+                : undefined,
+        note: base.notes ? String(renderPaymentValue("notes", base.notes, base)) : undefined,
     };
 }
 
@@ -281,7 +304,11 @@ function toRenderedHeaderExportRow(
 ──────────────────────────────────────────────────────────────────────────── */
 
 function formatUSD(n: number) {
-    return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+    return n.toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 2,
+    });
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -334,33 +361,28 @@ export default async function MonthlyPaymentBreakdown(props: Props) {
 
     for (const p of payments) {
         const key = p.leaseId;
-        const leaseHasAdvance = !!p.lease?.hasAdvance; // ← read from lease once
         const commission = p.lease.commission;
 
-        const entry = byLease.get(key);
+        // Ensure we always have 'totals' on the entry
+        let entry = byLease.get(key);
         if (!entry) {
-            const totals = computeLeasePaymentTotals(
-                [
-                    {
-                        paymentType: p.paymentType as any,
-                        amount: p.amount,
-                    },
-                ],
-                leaseHasAdvance, // ← pass lease-level override
-                commission
-            );
-            byLease.set(key, { lease: p.lease!, payments: [p], totals });
-        } else {
-            entry.payments.push(p);
-            entry.totals = computeLeasePaymentTotals(
-                entry.payments.map((x) => ({
-                    paymentType: x.paymentType as any,
-                    amount: x.amount,
-                })),
-                leaseHasAdvance, // ← pass lease-level override
-                commission
-            );
+            entry = {
+                lease: p.lease,
+                payments: [],
+                totals: computeLeasePaymentTotals([], commission),
+            };
+            byLease.set(key, entry);
         }
+
+        entry.payments.push(p);
+
+        // Normalize payout to number so it matches LeasePaymentLike
+        const leasePayments = entry.payments.map(({ amount, payout }) => ({
+            amount,
+            payout: payout ?? 0,
+        }));
+
+        entry.totals = computeLeasePaymentTotals(leasePayments, commission);
     }
 
     // Sort groups by the LEASE createdAt (newest → oldest).
@@ -372,14 +394,14 @@ export default async function MonthlyPaymentBreakdown(props: Props) {
 
     // Grand totals (use totalBillOut so chargebacks are reflected)
     const grandTotal = groups.reduce((sum, g) => sum + g.totals.totalBillOut, 0);
-    const totalChargebacks = groups.reduce((sum, g) => sum + g.totals.chargebacks, 0);
+    const totalChargebacks = groups.reduce((sum, g) => sum + g.totals.totalChargebacks, 0);
 
     const { month: formattedMonth, year: formattedYear } = getMonthAndYear(month, year);
 
     const paymentHueMap: Record<string, number> = {
-        advance: 45,      // warm yellow-orange
-        full: 145,        // green
-        partial: 210,     // blue
+        advance: 210,      // warm yellow-orange
+        payment: 145,        // green
+        adjustment: 45,     // blue
         chargeback: 350,  // red/pink
     };
 
@@ -400,6 +422,7 @@ export default async function MonthlyPaymentBreakdown(props: Props) {
                     leaseId: p.leaseId,
                     paymentType: p.paymentType as PaymentRow["paymentType"],
                     amount: p.amount,
+                    payout: (p as any).payout ?? 0, // NEW
                     date: p.date as any,
                     notes: p.notes,
                     createdAt: p.createdAt as any,
@@ -456,36 +479,48 @@ export default async function MonthlyPaymentBreakdown(props: Props) {
                                 <table className={styles.leaseHeaderTable}>
                                     <thead>
                                         <tr>
-                                            <th>Invoice</th>
-                                            <th>Move In Date</th>
-                                            <th>Rent</th>
-                                            <th>Commission</th>
-                                            <th>Status</th>
-                                            <th>Total Bill Out</th>
+                                            {[
+                                                <th key="invoice">Invoice</th>,
+                                                <th key="moveInDate">Move In Date</th>,
+                                                <th key="rent">Rent</th>,
+                                                <th key="commission">Commission</th>,
+                                                <th key="status">Status</th>,
+                                                <th key="totalBillOut">Total Bill Out</th>,
+                                            ]}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td>
-                                                <Link
-                                                    color="primary"
-                                                    href={`/lease/${lease.id}`}
-                                                    className={styles.leaseLink}
-                                                >
-                                                    #{renderLogValueSafe("invoiceNumber", logRow.invoiceNumber, logRow)}
-                                                </Link>
-                                            </td>
-                                            <td>{renderLogValueSafe("moveInDate", logRow.moveInDate, logRow)}</td>
-                                            <td>{renderLogValueSafe("rentAmount", logRow.rentAmount, logRow)}</td>
-                                            <td>{renderLogValueSafe("commission", logRow.commission, logRow)}</td>
-                                            <td>{renderLogValueSafe("paidStatus", logRow.paidStatus, logRow)}</td>
-                                            <td>
-                                                {renderLogValueSafe(
-                                                    "totalPaidThisMonth" as keyof LogRow,
-                                                    totals.totalBillOut,
-                                                    logRow,
-                                                )}
-                                            </td>
+                                            {[
+                                                <td key="invoice">
+                                                    <Link
+                                                        color="primary"
+                                                        href={`/lease/${lease.id}`}
+                                                        className={styles.leaseLink}
+                                                    >
+                                                        #{renderLogValueSafe("invoiceNumber", logRow.invoiceNumber, logRow)}
+                                                    </Link>
+                                                </td>,
+                                                <td key="moveInDate">
+                                                    {renderLogValueSafe("moveInDate", logRow.moveInDate, logRow)}
+                                                </td>,
+                                                <td key="rent">
+                                                    {renderLogValueSafe("rentAmount", logRow.rentAmount, logRow)}
+                                                </td>,
+                                                <td key="commission">
+                                                    {renderLogValueSafe("commission", logRow.commission, logRow)}
+                                                </td>,
+                                                <td key="status">
+                                                    {renderLogValueSafe("paidStatus", logRow.paidStatus, logRow)}
+                                                </td>,
+                                                <td key="totalBillOut">
+                                                    {renderLogValueSafe(
+                                                        "totalPaidThisMonth" as keyof LogRow,
+                                                        totals.totalBillOut,
+                                                        logRow,
+                                                    )}
+                                                </td>,
+                                            ]}
                                         </tr>
                                     </tbody>
                                 </table>
@@ -494,10 +529,13 @@ export default async function MonthlyPaymentBreakdown(props: Props) {
                                 <table className={styles.paymentTable}>
                                     <thead>
                                         <tr>
-                                            <th>{getPaymentColumn("paymentType")?.label}</th>
-                                            <th>{getPaymentColumn("date")?.label}</th>
-                                            <th>{getPaymentColumn("amount")?.label}</th>
-                                            <th>{getPaymentColumn("notes")?.label}</th>
+                                            {[
+                                                <th key="type">{getPaymentColumn("paymentType")?.label}</th>,
+                                                <th key="date">{getPaymentColumn("date")?.label}</th>,
+                                                <th key="amount">{getPaymentColumn("amount")?.label}</th>,
+                                                <th key="payout">{getPaymentColumn("payout" as any)?.label ?? "Payout"}</th>,
+                                                <th key="notes">{getPaymentColumn("notes")?.label}</th>,
+                                            ]}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -507,21 +545,31 @@ export default async function MonthlyPaymentBreakdown(props: Props) {
                                                 leaseId: p.leaseId,
                                                 paymentType: p.paymentType as PaymentRow["paymentType"],
                                                 amount: p.amount,
-                                                date: p.date as any,
+                                                payout: p.payout ?? 0, // NEW
+                                                date: p.date,
                                                 notes: p.notes,
-                                                createdAt: p.createdAt as any,
+                                                createdAt: p.createdAt,
                                             });
+
+                                            const base = row as unknown as PaymentRow;
 
                                             return (
                                                 <tr key={p.id} className={styles.paymentRow}>
-                                                    <td>
-                                                        <Chip hue={paymentHueMap[row.paymentType] ?? 210}>
-                                                            {renderPaymentValue("paymentType", row.paymentType, row)}
-                                                        </Chip>
-                                                    </td>
-                                                    <td>{renderPaymentValue("date", row.date, row)}</td>
-                                                    <td>{renderPaymentValue("amount", row.amount, row)}</td>
-                                                    <td>{renderPaymentValue("notes", row.notes ?? "", row)}</td>
+                                                    {[
+                                                        <td key="type">
+                                                            <Chip hue={paymentHueMap[row.paymentType] ?? 210}>
+                                                                {renderPaymentValue("paymentType", base.paymentType, base)}
+                                                            </Chip>
+                                                        </td>,
+                                                        <td key="date">{renderPaymentValue("date", base.date, base)}</td>,
+                                                        <td key="amount">{renderPaymentValue("amount", base.amount, base)}</td>,
+                                                        <td key="payout">
+                                                            {renderPaymentValue("payout" as any, row.payout as any, base)}
+                                                        </td>,
+                                                        <td key="notes">
+                                                            {renderPaymentValue("notes", (base.notes ?? "") as any, base)}
+                                                        </td>,
+                                                    ]}
                                                 </tr>
                                             );
                                         })}

@@ -38,7 +38,7 @@
     text-align: left;
     border-bottom: 1px solid var(--border);
     background-color: hsl(0, 0%, 95%);
-    padding: 1rem;
+    padding: 0.75rem;
     white-space: nowrap;
     /* keep headers on one line */
 }

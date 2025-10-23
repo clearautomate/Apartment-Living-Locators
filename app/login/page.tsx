@@ -85,8 +85,8 @@ export default function LoginPage() {
                         <FormError message={error} />
 
                         <FormActions align="right">
-                            <Button size="lg" type="submit" disabled={submitting} fullWidth>
-                                {submitting ? "Logging in..." : "Log In"}
+                            <Button size="lg" type="submit" disabled={submitting} fullWidth loading={submitting}>
+                                Log In
                             </Button>
                         </FormActions>
                     </Form>

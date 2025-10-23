@@ -22,6 +22,8 @@ export const LogSchema = z
         paidStatus: z
             .enum(["unpaid", "paid", "goingToPay", "chargeback", "partially"])
             .optional(),
+        balancePaid: z.coerce.number().optional(),
+        balanceDue: z.coerce.number().optional(),
         createdAt: z.iso.datetime().optional(),
         userId: z.uuid(),
     })
@@ -94,7 +96,7 @@ export const logColumns: ColumnDef<LogRow>[] = [
             typeof v === "number"
                 ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(v)
                 : "",
-    },
+        },
 
     {
         key: "commissionType",

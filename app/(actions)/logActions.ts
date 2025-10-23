@@ -128,6 +128,7 @@ export async function onCreate(agentId: string, form: FormData): Promise<ActionR
               {
                 paymentType: PaymentType.advance,
                 amount: Number(ready.commission ?? 0),
+                payout: Number(ready.commission ?? 0),
                 date: new Date(),
                 userId: agentId,
               },
@@ -195,7 +196,10 @@ export async function onUpdate(
     if (existing) {
       await prisma.payment.update({
         where: { id: existing.id },
-        data: { amount: Number(ready.commission ?? 0) },
+        data: {
+          amount: Number(ready.commission ?? 0),
+          payout: Number(ready.commission ?? 0)
+        },
       });
     } else {
       await prisma.payment.create({
@@ -203,6 +207,7 @@ export async function onUpdate(
           leaseId: id,
           paymentType: PaymentType.advance,
           amount: Number(ready.commission ?? 0),
+          payout: Number(ready.commission ?? 0),
           date: new Date(),
           userId: agentId,
         },

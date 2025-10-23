@@ -43,3 +43,11 @@
 .title h2 {
     margin-bottom: 0;
 }
+
+.maxAddon {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}

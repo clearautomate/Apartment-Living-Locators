@@ -114,3 +114,27 @@
     color: var(--danger);
     /* red-700 */
 }
+
+
+
+.fieldShell {
+    display: inline-flex;
+    align-items: stretch;
+    gap: .5rem;
+}
+
+.fieldShell__control {
+    display: inline-flex;
+    align-items: center;
+}
+
+.fieldShell__addon {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    white-space: nowrap;
+}
+
+.fieldShell__addon--start {
+    order: -1;
+}

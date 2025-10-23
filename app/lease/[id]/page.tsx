@@ -100,6 +100,8 @@ export default async function LeasePage({ params }: PageProps) {
         // Back-compat for the "precent" typo (keep your intended fallback):
         commissionPercent:
             (lease as any).commissionPercent ?? (lease as any).commissionPrecent,
+        balancePaid: lease.balancePaid ?? 0,
+        balanceDue: lease.balanceDue ?? 0,
     };
 
     /* ── Use computeLeasePaymentTotals for this lease ──────────────────────────
@@ -107,29 +109,14 @@ export default async function LeasePage({ params }: PageProps) {
        We pass the same lease-level boolean to every payment for this lease. */
     const payments = Array.isArray(rows)
         ? rows.map((r) => ({
-            paymentType: r.paymentType as any, // "advance" | "full" | "partial" | "chargeback"
             amount: Number(r.amount) || 0,
-            hasAdvance: false, // row-level not used when we pass lease flag
+            payout: Number(r.payout) || 0,
         }))
         : [];
 
-    const totals = computeLeasePaymentTotals(payments, !!lease.hasAdvance, lease.commission);
-
-    // Safeguard: detect an "advance-only" situation (treat as unpaid for bill-out UI)
-    const hasFullOrPartial = payments.some(
-        (p) => p.paymentType === "full" || p.paymentType === "partial",
-    );
-    const hasChargeback = payments.some((p) => p.paymentType === "chargeback");
-    const hasAdvance = payments.some((p) => p.paymentType === "advance");
-    const advanceOnly = hasAdvance && !hasFullOrPartial && !hasChargeback;
-
-    const commissionDue = Number(lease.commission) || 0;
-
-    // Agent Bill Out:
-    // - If advance-only: show full commission (unpaid look)
-    // - Else: use the helper’s positive-paid total (advances treated per your rules)
-    const agentBillOut = advanceOnly ? commissionDue : Number(totals?.totalBillOut ?? 0);
+    const totals = computeLeasePaymentTotals(payments, lease.commission);
     const balanceDue = totals.remainingBalance;
+    const agentBillOut = totals.totalBillOut;
 
     const onCreateBound = onCreate.bind(null, id);
     const onUpdateBound = onUpdate.bind(null, id);
@@ -216,8 +203,6 @@ export default async function LeasePage({ params }: PageProps) {
 
                             <Field label="Balance Due">{fmtUSD(balanceDue)}</Field>
 
-                            <span />
-
                             <Field label="Total Bill Out">{fmtUSD(agentBillOut)}</Field>
 
                             <Field label="Split Amount">
@@ -248,6 +233,7 @@ export default async function LeasePage({ params }: PageProps) {
                     <Client
                         rows={rows}
                         role={user.permissions}
+                        maxPayment={balanceDue}
                         actions={user.permissions === 'owner' ? {
                             onCreate: onCreateBound,
                             onUpdate: onUpdateBound,

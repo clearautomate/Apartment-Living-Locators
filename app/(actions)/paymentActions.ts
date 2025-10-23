@@ -17,10 +17,8 @@ import { PaidStatus, PaymentType } from "@/app/generated/prisma";
 
 type ActionResult = { ok: boolean; message: string };
 
-// Aggregation shape
 type PaymentLike = { id: string; amount: number | null; paymentType: PaymentType };
 
-// Infer payload types from client
 type PaymentCreateData = Parameters<typeof prisma.payment.create>[0]["data"];
 type PaymentUpdateData = Parameters<typeof prisma.payment.update>[0]["data"];
 
@@ -48,61 +46,69 @@ async function fetchLeaseAndPayments(
     const commission: number = Number(lease?.commission ?? 0);
     const moveInDate: Date | null = lease?.moveInDate ?? null;
 
-    const payments: PaymentLike[] = (paymentsRaw as Array<{
-        id: string; amount: number | null; paymentType: PaymentType;
-    }>).map(
-        (p: { id: string; amount: number | null; paymentType: PaymentType }): PaymentLike => ({
-            id: p.id,
-            amount: p.amount,
-            paymentType: p.paymentType,
-        })
-    );
+    const payments: PaymentLike[] = (paymentsRaw as {
+        id: string;
+        amount: number | null;
+        paymentType: PaymentType;
+    }[]).map((p) => ({
+        id: p.id,
+        amount: p.amount,
+        paymentType: p.paymentType,
+    }));
 
     return { commission, payments, moveInDate };
 }
 
 /**
- * Compute aggregates with these invariants:
- * - paidAll: sum of ALL amounts (advances, fulls, partials, and chargebacks [negative])
- * - paidNonAdvance: sum of ONLY real positive payments (full + partial)
- * - hasAdvance: whether any advance exists
- * - hasChargeback: whether any chargeback exists
+ * Aggregates for the simplified 4-type system
  */
 function computePaymentAggregates(
     payments: PaymentLike[],
     excludePaymentId?: string
-): {
-    paidAll: number;
-    paidNonAdvance: number;
-    hasAdvance: boolean;
-    hasChargeback: boolean;
-} {
-    const filtered: PaymentLike[] = excludePaymentId
-        ? payments.filter((p: PaymentLike) => p.id !== excludePaymentId)
+) {
+    const filtered = excludePaymentId
+        ? payments.filter((p) => p.id !== excludePaymentId)
         : payments;
 
-    const hasAdvance: boolean = filtered.some(
-        (p: PaymentLike) => p.paymentType === PaymentType.advance
-    );
+    let paidAll = 0;
+    let paidPayments = 0;
+    let totalAdjustments = 0;
+    let totalAdvances = 0;
+    let totalChargebacks = 0;
 
-    const hasChargeback: boolean = filtered.some(
-        (p: PaymentLike) => p.paymentType === PaymentType.chargeback
-    );
+    for (const p of filtered) {
+        const amt = Number(p.amount ?? 0);
+        paidAll += amt;
+        switch (p.paymentType) {
+            case PaymentType.payment:
+                paidPayments += amt;
+                break;
+            case PaymentType.adjustment:
+                totalAdjustments += amt;
+                break;
+            case PaymentType.advance:
+                totalAdvances += amt;
+                break;
+            case PaymentType.chargeback:
+                totalChargebacks += amt;
+                break;
+        }
+    }
 
-    const paidAll: number = filtered.reduce(
-        (sum: number, p: PaymentLike) => sum + Number(p.amount ?? 0),
-        0
-    );
+    const hasAdvance = filtered.some((p) => p.paymentType === PaymentType.advance);
+    const hasChargeback = filtered.some((p) => p.paymentType === PaymentType.chargeback);
+    const advanceOutstanding = Math.max(totalAdvances + totalChargebacks, 0);
 
-    const paidNonAdvance: number = filtered
-        .filter(
-            (p: PaymentLike) =>
-                p.paymentType === PaymentType.full ||
-                p.paymentType === PaymentType.partial
-        )
-        .reduce((sum: number, p: PaymentLike) => sum + Number(p.amount ?? 0), 0);
-
-    return { paidAll, paidNonAdvance, hasAdvance, hasChargeback };
+    return {
+        paidAll,
+        paidPayments,
+        totalAdjustments,
+        totalAdvances,
+        totalChargebacks,
+        advanceOutstanding,
+        hasAdvance,
+        hasChargeback,
+    };
 }
 
 async function enforcedAmountForType(options: {
@@ -115,105 +121,149 @@ async function enforcedAmountForType(options: {
     const { tx, leaseId, paymentType, submittedAmount, excludePaymentId } = options;
 
     const { commission, payments } = await fetchLeaseAndPayments(tx, leaseId);
-    const { paidAll, paidNonAdvance } = computePaymentAggregates(payments, excludePaymentId);
+    const {
+        paidAll,
+        paidPayments,
+        totalAdjustments,
+        advanceOutstanding,
+    } = computePaymentAggregates(payments, excludePaymentId);
 
     const numericSubmitted: number = Number(submittedAmount ?? 0);
+    const adjustedCap = Math.max(commission + totalAdjustments, 0);
+    const remainingIgnoringAdvances = Math.max(adjustedCap - paidPayments, 0);
 
     switch (paymentType) {
-        case PaymentType.full: {
-            // FULL ignores ADVANCE; cover remaining non-advance gap up to commission
-            const remainingIgnoringAdvances: number = Math.max(commission - paidNonAdvance, 0);
-            return remainingIgnoringAdvances;
-        }
-        case PaymentType.advance: {
-            // Advance tops up remaining against overall total (incl. prior advances)
-            const remaining: number = Math.max(commission - paidAll, 0);
-            return remaining;
-        }
+        case PaymentType.payment:
+            // Allow ANY positive amount (no cap to remaining).
+            // Payout will still be governed by computePayoutForType using advanceOutstanding.
+            if (numericSubmitted < 0) throw new Error("Please enter a non-negative amount.");
+            return numericSubmitted;
+
+        case PaymentType.advance:
+            return Math.max(adjustedCap - paidAll, 0);
+
         case PaymentType.chargeback:
-            return -commission;
-        case PaymentType.partial:
-            return Math.max(numericSubmitted, 0);
+            return -advanceOutstanding;
+
+        case PaymentType.adjustment:
+            return numericSubmitted;
+
         default:
             return numericSubmitted;
     }
 }
 
+/* ─────────────── Payout logic ─────────────── */
+
+function computePayoutForType(
+    paymentType: PaymentType,
+    amount: number,
+    opts: { hasAdvance: boolean; hasChargeback: boolean; advanceOutstanding: number }
+): number {
+    const { hasAdvance, hasChargeback, advanceOutstanding } = opts;
+
+    switch (paymentType) {
+        case PaymentType.advance:
+            return amount;
+
+        case PaymentType.payment:
+            // PREVIOUSLY: if hasAdvance && !hasChargeback -> payout 0
+            // NEW RULE: if a payment exceeds outstanding advances, pay out the difference.
+            // Example: advances 1500, payment 2000 => payout 500
+            if (hasAdvance && !hasChargeback) {
+                return Math.max(amount - advanceOutstanding, 0);
+            }
+            return amount;
+
+        case PaymentType.chargeback:
+            // Ensure chargebacks reduce payout (negative)
+            return amount <= 0 ? amount : -Math.abs(amount);
+
+        case PaymentType.adjustment:
+            return amount;
+
+        default:
+            return 0;
+    }
+}
+
 /* ─────────────── Safeties ─────────────── */
 
-/** Reject zero-amount posts for advance/full/partial. */
-function assertNonZeroAmount(type: PaymentType, amt: number) {
-    if ((type === PaymentType.advance || type === PaymentType.full || type === PaymentType.partial) && amt === 0) {
+function assertNonZeroAmount(_type: PaymentType, amt: number) {
+    if (amt === 0) {
         throw new Error("This entry would post $0.00. Nothing to record.");
     }
 }
 
-/** Only one chargeback per lease */
 function assertNoExistingChargeback(hasChargeback: boolean) {
     if (hasChargeback) {
-        throw new Error("A chargeback already exists for this lease. Only one chargeback is allowed.");
+        throw new Error("A chargeback already exists for this lease.");
     }
 }
 
-/**
- * Advance only before any real activity AND only one allowed.
- * Blocks if: there is any non-advance payment, any chargeback, or an advance already exists.
- */
-function assertAdvanceEligible(paidNonAdvance: number, hasChargeback: boolean, hasAdvance: boolean) {
-    if (hasAdvance) {
-        throw new Error("An advance has already been recorded for this lease. Use a partial or full payment instead.");
+function assertAdvanceEligible(
+    hasAnyAdvance: boolean,
+    hasChargeback: boolean,
+    hasAnyPayment: boolean
+) {
+    if (hasAnyAdvance) {
+        throw new Error("An advance has already been recorded for this lease.");
     }
-    if (paidNonAdvance > 0 || hasChargeback) {
-        throw new Error("An advance can only be created before any payments or chargebacks have been recorded.");
+    if (hasAnyPayment || hasChargeback) {
+        throw new Error("An advance can only be created before payments or chargebacks.");
     }
 }
 
-/** Date sanity: payment date not before lease move-in date */
 function assertDateNotBeforeMoveIn(d: Date, moveIn: Date | null) {
     if (moveIn && d.getTime() < moveIn.getTime()) {
         const y = moveIn.getFullYear();
         const m = String(moveIn.getMonth() + 1).padStart(2, "0");
         const day = String(moveIn.getDate()).padStart(2, "0");
-        throw new Error(`Payment date cannot be before the lease move-in date (${y}-${m}-${day}).`);
+        throw new Error(
+            `Payment date cannot be before the lease move-in date (${y}-${m}-${day}).`
+        );
     }
 }
 
-/**
- * Recompute and persist lease aggregates:
- * - unpaid       → ONLY an advance exists (no non-advance payments), and net is not negative
- * - chargeback   → at least one chargeback exists AND net ≤ 0
- * - partially    → some non-advance payment (> 0) but < commission, and net is not negative
- * - paid         → non-advance payments ≥ commission
- */
+/* ─────────────── Recompute aggregates ─────────────── */
+
 async function recomputeLeaseAggregates(
     tx: PrismaClient | Prisma.TransactionClient,
     leaseId: string
 ): Promise<void> {
     const { commission, payments } = await fetchLeaseAndPayments(tx, leaseId);
-    const { paidAll, paidNonAdvance, hasAdvance, hasChargeback } = computePaymentAggregates(payments);
 
+    // Reuse your aggregate helper to get what we need
+    const {
+        paidPayments,
+        totalAdjustments,
+        hasChargeback,
+    } = computePaymentAggregates(payments);
+
+    // Balance fields you already maintain (based on actual payments only)
+    const balancePaid: number = paidPayments;
+    const balanceDueCap = Math.max(commission + totalAdjustments, 0);
+    const balanceDue: number = Math.max(balanceDueCap - paidPayments, 0);
+
+    // Decide paidStatus
     let paidStatus: PaidStatus;
-
-    if (hasChargeback && paidAll <= 0) {
+    if (hasChargeback) {
         paidStatus = PaidStatus.chargeback;
-    } else if (paidNonAdvance >= commission) {
+    } else if (balanceDueCap === 0 || paidPayments >= balanceDueCap) {
+        // If adjusted cap is zero (e.g., full negative adjustments) we consider it paid.
         paidStatus = PaidStatus.paid;
-    } else if (paidNonAdvance > 0) {
-        paidStatus = PaidStatus.partially;
-    } else if (hasAdvance) {
+    } else if (paidPayments === 0) {
         paidStatus = PaidStatus.unpaid;
     } else {
-        paidStatus = PaidStatus.unpaid;
+        paidStatus = PaidStatus.partially;
     }
-
-    const totalPaid: number = paidAll;
-    const paidDifference: number = commission - totalPaid;
 
     await tx.lease.update({
         where: { id: leaseId },
-        data: { totalPaid, paidStatus, paidDifference, hasAdvance },
+        data: { balancePaid, balanceDue, paidStatus },
     });
 }
+
 
 /* ─────────────── Actions ─────────────── */
 
@@ -227,7 +277,6 @@ export async function onCreate(leaseId: string, form: FormData): Promise<ActionR
 
     try {
         const raw: Record<string, unknown> = Object.fromEntries(form);
-
         const parsed = PaymentSchema.omit({
             id: true,
             createdAt: true,
@@ -244,14 +293,13 @@ export async function onCreate(leaseId: string, form: FormData): Promise<ActionR
             [k: string]: unknown;
         };
 
-        if (paymentType == null) throw new Error("paymentType is required.");
+        if (!paymentType) throw new Error("paymentType is required.");
 
         await prisma.$transaction(async (tx) => {
-            // Load context
-            const { commission, payments, moveInDate } = await fetchLeaseAndPayments(tx, leaseId);
-            const { paidNonAdvance, hasChargeback, hasAdvance } = computePaymentAggregates(payments);
+            const { payments, moveInDate } = await fetchLeaseAndPayments(tx, leaseId);
+            const { paidPayments, hasChargeback, hasAdvance, advanceOutstanding } =
+                computePaymentAggregates(payments);
 
-            // Enforce amount for this type
             const enforcedAmount: number = await enforcedAmountForType({
                 tx,
                 leaseId,
@@ -259,46 +307,39 @@ export async function onCreate(leaseId: string, form: FormData): Promise<ActionR
                 submittedAmount: amount,
             });
 
-            // Type-specific safeties
             if (paymentType === PaymentType.chargeback) {
                 assertNoExistingChargeback(hasChargeback);
             }
             if (paymentType === PaymentType.advance) {
-                assertAdvanceEligible(paidNonAdvance, hasChargeback, hasAdvance); // ← also blocks second advance
+                const hasAnyPayment = paidPayments > 0;
+                assertAdvanceEligible(hasAdvance, hasChargeback, hasAnyPayment);
             }
 
-            // Existing policy: partials require prior chargeback if < commission
-            if (
-                paymentType === PaymentType.partial &&
-                enforcedAmount < commission &&
-                !hasChargeback
-            ) {
-                throw new Error(
-                    "Cannot record a underpaid partial payment before a chargeback exists for this lease. Please create a chargeback first."
-                );
-            }
+            assertNonZeroAmount(paymentType, enforcedAmount);
 
-            // Block $0.00 posts
-            assertNonZeroAmount(paymentType, enforcedAmount); // ← prevents second advance posting as $0
-
-            // Date sanity
             const concreteDate: Date = date ? new Date(date) : new Date();
             assertDateNotBeforeMoveIn(concreteDate, moveInDate);
 
-            // Resolve userId from lease
             const leaseUser = await tx.lease.findUnique({
                 where: { id: leaseId },
                 select: { userId: true },
             });
             if (!leaseUser?.userId) {
-                throw new Error("Lease has no associated userId; cannot create payment.");
+                throw new Error("Lease has no associated userId.");
             }
-            const userId: string = leaseUser.userId;
+            const userId = leaseUser.userId;
+
+            const payout = computePayoutForType(paymentType, enforcedAmount, {
+                hasAdvance,
+                hasChargeback,
+                advanceOutstanding,
+            });
 
             const payload: PaymentCreateData = {
                 ...(rest as Record<string, unknown>),
                 paymentType,
                 amount: enforcedAmount,
+                payout,
                 date: concreteDate,
                 leaseId,
                 userId,
@@ -330,21 +371,13 @@ export async function onUpdate(
 
     try {
         const raw: Record<string, unknown> = Object.fromEntries(form);
-        const { id: _i1, leaseId: _i2, createdAt: _i3, ...restRaw } = raw;
+        const { id: _1, leaseId: _2, createdAt: _3, ...restRaw } = raw;
 
         const parsed = PaymentSchema.partial().parse(restRaw);
         const scoped = keepPolicyFields(paymentFieldPolicy, parsed);
         const clean = sanitizeWriteInput(paymentFieldPolicy, role, scoped, { strict: true });
 
-        const {
-            id: _i4,
-            leaseId: _i5,
-            createdAt: _i6,
-            date,
-            amount,
-            paymentType,
-            ...rest
-        } = (clean ?? {}) as {
+        const { date, amount, paymentType, ...rest } = (clean ?? {}) as {
             date?: string | Date;
             amount?: number;
             paymentType?: PaymentType;
@@ -352,19 +385,17 @@ export async function onUpdate(
         };
 
         await prisma.$transaction(async (tx) => {
-            // Context, excluding this payment from aggregates
-            const { commission, payments, moveInDate } = await fetchLeaseAndPayments(tx, leaseId);
-            const { paidNonAdvance, hasChargeback, hasAdvance } = computePaymentAggregates(payments, id);
+            const { payments, moveInDate } = await fetchLeaseAndPayments(tx, leaseId);
+            const { paidPayments, hasChargeback, hasAdvance, advanceOutstanding } =
+                computePaymentAggregates(payments, id);
 
-            // Determine effective type if not changing it
             const current = await tx.payment.findUnique({
                 where: { id },
                 select: { paymentType: true },
             });
             if (!current) throw new Error("Payment not found.");
-            const effectiveType: PaymentType = (paymentType ?? current.paymentType)!;
+            const effectiveType: PaymentType = paymentType ?? current.paymentType;
 
-            // Compute amount
             const enforcedAmount: number = await enforcedAmountForType({
                 tx,
                 leaseId,
@@ -373,37 +404,29 @@ export async function onUpdate(
                 excludePaymentId: id,
             });
 
-            // Type-specific safeties
             if (effectiveType === PaymentType.chargeback) {
                 assertNoExistingChargeback(hasChargeback);
             }
             if (effectiveType === PaymentType.advance) {
-                assertAdvanceEligible(paidNonAdvance, hasChargeback, hasAdvance); // ← also blocks creating a second advance via update
+                const hasAnyPayment = paidPayments > 0;
+                assertAdvanceEligible(hasAdvance, hasChargeback, hasAnyPayment);
             }
 
-            // Partial requires prior chargeback if < commission
-            if (
-                effectiveType === PaymentType.partial &&
-                enforcedAmount < commission &&
-                !hasChargeback
-            ) {
-                throw new Error(
-                    "Cannot record a partial payment before a chargeback exists for this lease. Please create a chargeback first."
-                );
-            }
-
-            // Block $0.00 posts
             assertNonZeroAmount(effectiveType, enforcedAmount);
 
-            // Date sanity (only if date is changing)
             const concreteDate = date ? new Date(date) : undefined;
-            if (concreteDate) {
-                assertDateNotBeforeMoveIn(concreteDate, moveInDate);
-            }
+            if (concreteDate) assertDateNotBeforeMoveIn(concreteDate, moveInDate);
+
+            const payout = computePayoutForType(effectiveType, enforcedAmount, {
+                hasAdvance,
+                hasChargeback,
+                advanceOutstanding,
+            });
 
             const payload: PaymentUpdateData = {
                 ...(rest as Record<string, unknown>),
                 amount: enforcedAmount,
+                payout,
                 ...(paymentType != null ? { paymentType: effectiveType } : {}),
                 ...(concreteDate ? { date: concreteDate } : {}),
             };

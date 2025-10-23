@@ -25,6 +25,8 @@ export const logFieldPolicy = {
     commission: { read: ["owner", "agent"], write: ["owner", "agent"] },
     extraNotes: { read: ["owner", "agent"], write: ["owner", "agent"] },
     paidStatus: { read: ["owner", "agent"], write: ["owner"] },
+    balancePaid: { read: [], write: [] },
+    balanceDue: { read: [], write: [] },
     createdAt: { read: ["owner", "agent"], write: [] },
     userId: { read: ["owner", "agent"], write: [] },
 } as const satisfies Record<LogField, FieldPolicy>;

@@ -117,10 +117,13 @@ export default async function GettingStartedPage() {
                     className={styles.video}
                     controls
                     preload="metadata"
-                    poster={"poster"}
+                    poster="https://czjpdfzvuyiiqsbf.public.blob.vercel-storage.com/thumbnail.jpg"
                     style={{ aspectRatio: "16/9" }}
                 >
-                    <source src={"src"} type={"type"} />
+                    <source
+                        src="https://czjpdfzvuyiiqsbf.public.blob.vercel-storage.com/explainer.mp4"
+                        type="video/mp4"
+                    />
                     Your browser does not support the video tag.
                 </video>
             </div>

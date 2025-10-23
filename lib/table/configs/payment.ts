@@ -4,24 +4,26 @@ import type { ColumnDef, TableConfig } from "../types";
 export const PaymentSchema = z.object({
     id: z.uuid(),
     leaseId: z.uuid(),
-    paymentType: z.enum(["advance", "full", "partial", "chargeback"]),
+    paymentType: z.enum(["advance", "chargeback", "payment", "adjustment"]),
+    payout: z.number().optional(),
     amount: z.coerce.number().optional(),
     date: z.iso.datetime(),
     notes: z.string().nullable().optional(),
     createdAt: z.iso.datetime().optional(),
-}).superRefine((val, ctx) => {
-    const needsAmount = val.paymentType === "partial";
-    const hasAmount =
-        typeof val.amount === "number" && Number.isFinite(val.amount);
+})
+// .superRefine((val, ctx) => {
+//     const needsAmount = val.paymentType === "partial";
+//     const hasAmount =
+//         typeof val.amount === "number" && Number.isFinite(val.amount);
 
-    if (needsAmount && !hasAmount) {
-        ctx.addIssue({
-            code: "custom",
-            path: ["amount"],
-            message: "Amount is required for Partial payments.",
-        });
-    }
-});
+//     if (needsAmount && !hasAmount) {
+//         ctx.addIssue({
+//             code: "custom",
+//             path: ["amount"],
+//             message: "Amount is required for Partial payments.",
+//         });
+//     }
+// });
 
 export type PaymentRow = z.infer<typeof PaymentSchema>;
 
@@ -33,10 +35,25 @@ export const paymentColumns: ColumnDef<PaymentRow>[] = [
         editableBy: ["owner"],
         options: [
             { value: "advance", label: "Advance" },
-            { value: "full", label: "Full" },
-            { value: "partial", label: "Partial" },
             { value: "chargeback", label: "Chargeback" },
-        ],
+            { value: "payment", label: "Payment" },
+            { value: "adjustment", label: "Manual Adjustment" },
+        ]
+    },
+
+    {
+        key: "payout",
+        label: "Agent Payout",
+        input: "money",
+        editableBy: [],
+        format: (v) =>
+            typeof v === "number"
+                ? new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    minimumFractionDigits: 2,
+                }).format(v)
+                : "",
     },
 
     {
@@ -64,7 +81,7 @@ export const paymentColumns: ColumnDef<PaymentRow>[] = [
         format: (v) =>
             v
                 ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(String(v)))
-                : "",
+                : ""
     },
 
     {

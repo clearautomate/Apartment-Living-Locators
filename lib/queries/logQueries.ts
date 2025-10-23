@@ -26,7 +26,7 @@ export async function listRows({ userId, searchParams }: Props): Promise<LogRow[
         },
         orderBy: { createdAt: "desc" },
     });
-
+   
     // Serialize dates to strings to match LogRow shape
     return rows.map((r) => ({
         ...r,
